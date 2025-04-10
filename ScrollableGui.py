@@ -14,6 +14,7 @@ class ListGui(CenterRootWindow):
     placeholder = 'Search'
     save_content = "non"
     hidden_categorys :list[str] = list()
+    search_var: tkinter.StringVar = None
 
 
     def __init__(self):
@@ -23,6 +24,7 @@ class ListGui(CenterRootWindow):
         self.grid_columnconfigure((0, 1, 2), weight=1)
 
         search_var = tkinter.StringVar()
+        self.search_var = search_var
         search_var.set("Search")
         search_bar = tkinter.Entry(self, textvariable=search_var, fg="gray")
         search_bar.grid(column=0, row=0, sticky="ew")
@@ -97,6 +99,7 @@ class ListGui(CenterRootWindow):
             reaction = global_vars.reactions[reaction_idx[0]][reaction_idx[1]]
             EditorGui.UniversalEditorGui(reaction).show()
         self.update_data()
+        self.update_search(self.search_var.get())
 
     def ask_destroy(self):
         answer = tkinter.messagebox.askokcancel("Don't save", "Are you sure you don't want to save?")
@@ -115,6 +118,9 @@ class ListGui(CenterRootWindow):
         self.reaction_mapper = {}
         i = 0
         for category in global_vars.reactions.keys():
+            self.listbox.insert(END, str(category).ljust(120,"-"))
+            self.reaction_mapper[entry_nr] = (category, -1)
+            entry_nr += 1
             for index in range(len(global_vars.reactions[category])):
                 text = str(global_vars.reactions[category][index])
                 if filter_txtstr.upper() in text.upper():
