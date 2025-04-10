@@ -11,8 +11,9 @@ class Reaction(Checkable, SelfFixing):
     is_sticky = False
     reversible = False
     is_disabled = False
+    category = ""
 
-    def __init__(self, educts, products, A_k, beta_k, E_k, is_sticky = False, is_reversible = False, is_disabled = False):
+    def __init__(self, educts, products, A_k, beta_k, E_k, category:str, is_sticky = False, is_reversible = False, is_disabled = False):
         self.educts = educts
         self.products = products
         self.A_k = A_k
@@ -21,6 +22,7 @@ class Reaction(Checkable, SelfFixing):
         self.is_sticky = is_sticky
         self.is_reversible = is_reversible
         self.is_disabled = is_disabled
+        self.category = category
 
     def __str__(self):
         text = ""

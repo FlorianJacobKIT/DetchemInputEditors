@@ -1,27 +1,26 @@
-import ctypes
 import tkinter
 import tkinter.messagebox
 from tkinter import *
 
-from CenterGui import CenterGui
+from CenterGui import CenterRootWindow
 import EditorGui
 import global_vars
 
 
-class ListGui(tkinter.Tk,CenterGui):
+class ListGui(CenterRootWindow):
 
     listbox: Listbox = None
-    reaction_mapper = {}
+    reaction_mapper : dict[int,tuple[str,int]] = {}
     placeholder = 'Search'
-    save_content = False
+    save_content = "non"
+    hidden_categorys :list[str] = list()
+
 
     def __init__(self):
         super().__init__()
 
         self.grid_rowconfigure(1, weight=1)
-        self.grid_columnconfigure((0, 1), weight=1)
-
-
+        self.grid_columnconfigure((0, 1, 2), weight=1)
 
         search_var = tkinter.StringVar()
         search_var.set("Search")
@@ -43,7 +42,7 @@ class ListGui(tkinter.Tk,CenterGui):
         search_bar.bind('<FocusOut>', add)
 
         frame = Frame(self, bg="blue")
-        frame.grid(row=1, column=0, columnspan = 2, sticky='nsew')
+        frame.grid(row=1, column=0, columnspan = 3, sticky='nsew')
         frame.grid_rowconfigure(0, weight=1)
         frame.grid_columnconfigure(0, weight=1)
 
@@ -61,28 +60,42 @@ class ListGui(tkinter.Tk,CenterGui):
         #for x in range(100):
         #    listNodes.insert(END, str(x))
 
-        for reaction in global_vars.reactions:
-            self.listbox.insert(END, str(reaction))
+        i = 0
+        self.reaction_mapper = {}
+        for reaction_category in global_vars.reactions:
+            self.listbox.insert(END, str(reaction_category).ljust(120,"-"))
+            self.reaction_mapper[i] = (reaction_category, -1)
+            i -=- 1
+            for j in range(len(global_vars.reactions[reaction_category])):
+                self.listbox.insert(END, str(global_vars.reactions[reaction_category][j]))
+                self.reaction_mapper[i] = (reaction_category, j)
+                i -=- 1
         self.listbox.config(width=0)
 
-        self.reaction_mapper = {}
-        for i in range(len(global_vars.reactions)):
-            self.reaction_mapper[i] = i
-
-        save_btn = tkinter.Button(self, text="Save", command=self.save)
+        save_btn = tkinter.Button(self, text="Save as copy", command=lambda: self.save("copy"))
         save_btn.grid(row=2, column=0, sticky='nsew')
 
+        save_btn = tkinter.Button(self, text="Overwrite", command=lambda:self.save("overwrite"))
+        save_btn.grid(row=2, column=1, sticky='nsew')
+
         close_btn = tkinter.Button(self, text="Close (Don't Save)", command=lambda: self.ask_destroy())
-        close_btn.grid(row=2, column=1, sticky='nsew')
+        close_btn.grid(row=2, column=2, sticky='nsew')
 
     def update_reaction(self, event):
         try:
             index = self.listbox.curselection()[0]
         except IndexError:
             return
+
         reaction_idx = self.reaction_mapper[index]
-        reaction = global_vars.reactions[reaction_idx]
-        EditorGui.UniversalEditorGui(reaction).show()
+        if reaction_idx[1] == -1:
+            if reaction_idx[0] in self.hidden_categorys:
+                self.hidden_categorys.remove(reaction_idx[0])
+            else:
+                self.hidden_categorys.append(reaction_idx[0])
+        else:
+            reaction = global_vars.reactions[reaction_idx[0]][reaction_idx[1]]
+            EditorGui.UniversalEditorGui(reaction).show()
         self.update_data()
 
     def ask_destroy(self):
@@ -90,8 +103,8 @@ class ListGui(tkinter.Tk,CenterGui):
         if answer:
             self.destroy()
 
-    def save(self):
-        self.save_content = True
+    def save(self, type) -> None:
+        self.save_content = type
         self.destroy()
 
     def update_search(self, filter_txtstr):
@@ -100,23 +113,40 @@ class ListGui(tkinter.Tk,CenterGui):
         self.listbox.delete(0, END)
         entry_nr = 0
         self.reaction_mapper = {}
-        for i in range(len(global_vars.reactions)):
-            text = str(global_vars.reactions[i])
-            if filter_txtstr.upper() in text.upper():
-                self.listbox.insert(END, text)
-                self.reaction_mapper[entry_nr] = i
-                entry_nr += 1
+        i = 0
+        for category in global_vars.reactions.keys():
+            for index in range(len(global_vars.reactions[category])):
+                text = str(global_vars.reactions[category][index])
+                if filter_txtstr.upper() in text.upper():
+                    self.listbox.insert(END, text)
+                    self.reaction_mapper[entry_nr] = (category, index)
+                    entry_nr += 1
         self.listbox.update()
 
     def update_data(self):
         self.listbox.delete(0, END)
         entry_nr = 0
         self.reaction_mapper = {}
-        for i in range(len(global_vars.reactions)):
-            text = str(global_vars.reactions[i])
-            self.listbox.insert(END, text)
-            self.reaction_mapper[entry_nr] = i
+        mover = list()
+        for category in global_vars.reactions.keys():
+            for i in range(len(global_vars.reactions[category])):
+                if global_vars.reactions[category][i].category != category:
+                    mover.append((category, global_vars.reactions[category][i].category, global_vars.reactions[category][i]))
+        for move in mover:
+            if move[1] not in global_vars.reactions.keys():
+                global_vars.reactions[move[1]] = list()
+            global_vars.reactions[move[1]].append(move[2])
+            global_vars.reactions[move[0]].remove(move[2])
+        for category in global_vars.reactions.keys():
+            self.listbox.insert(END, str(category).ljust(120,"-"))
+            self.reaction_mapper[entry_nr] = (category, -1)
             entry_nr += 1
+            if category not in self.hidden_categorys:
+                for i in range(len(global_vars.reactions[category])):
+                    text = str(global_vars.reactions[category][i])
+                    self.listbox.insert(END, text)
+                    self.reaction_mapper[entry_nr] = (category, i)
+                    entry_nr += 1
         self.listbox.update()
 
     def show(self):

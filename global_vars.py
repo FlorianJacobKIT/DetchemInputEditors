@@ -1,3 +1,3 @@
 import Reaction_Class
 
-reactions: list[Reaction_Class.Reaction] = list()
+reactions: dict[str,list[Reaction_Class.Reaction]] = dict()

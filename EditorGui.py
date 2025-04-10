@@ -1,23 +1,22 @@
-import ctypes
+
 import tkinter
 import tkinter.messagebox
 import tkinter.simpledialog
 import copy
 
-from CenterGui import CenterGui
+import Reaction_Class
+from CenterGui import CenterWindow
 from Interfaces import Checkable,SelfFixing
-from Reaction_Class import Reaction
 
 
-#setattr(self, key, value)
-
-class UniversalEditorGui(CenterGui):
+class UniversalEditorGui(CenterWindow):
 
     entry_vars: dict[tkinter.Variable] = {}
-    reaction = None
+    reaction: Reaction_Class.Reaction = None
 
-    def __init__(self, reaction):
+    def __init__(self, reaction: Reaction_Class.Reaction):
         super().__init__()
+        self.entry_vars = {}
         self.reaction = reaction
         self.focus_set()
         self.generate_fields()
@@ -45,7 +44,7 @@ class UniversalEditorGui(CenterGui):
                     self.entry_vars[key + ":" + dict_key].set(sub_element)
                     entry = tkinter.Entry(frame, textvariable=self.entry_vars[key + ":" + dict_key])
                     entry.grid(column=1, row=j, sticky="nsew")
-                    rem_btn = tkinter.Button(frame, text="-", command=lambda d=value: self.remove_entry(d, dict_key))
+                    rem_btn = tkinter.Button(frame, text="-", command=lambda k=dict_key, d=dict_version[key]: self.remove_entry(d, k))
                     rem_btn.grid(column=2, row=j, sticky="nsew")
                     j -= - 1
 
@@ -157,9 +156,9 @@ class UniversalEditorGui(CenterGui):
         self.entry_vars.clear()
         self.generate_fields()
 
-    def remove_entry(self, d, sub_key):
-        if sub_key in d:
-            d.pop(sub_key)
+    def remove_entry(self, sub_dict, sub_key):
+        if sub_key in sub_dict:
+            sub_dict.pop(sub_key)
         for widget in self.winfo_children():
             widget.destroy()
         self.entry_vars.clear()

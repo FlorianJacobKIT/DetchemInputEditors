@@ -2,7 +2,7 @@ import ctypes
 import tkinter
 
 
-class CenterGui(tkinter.Toplevel):
+class CenterGuiMixin(tkinter.Toplevel):
 
     def __init__(self):
         super().__init__()
@@ -22,3 +22,11 @@ class CenterGui(tkinter.Toplevel):
         y = int(((screen_height / 2) - (height / 2)))
         self.geometry('+%d+%d' % (x, y))
         return self
+
+class CenterWindow(CenterGuiMixin):
+    def __init__(self):
+        super().__init__()
+
+
+class CenterRootWindow(tkinter.Tk, CenterGuiMixin):
+    pass
