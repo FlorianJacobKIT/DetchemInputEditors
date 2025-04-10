@@ -77,4 +77,36 @@ gui.lift()
 gui.attributes('-topmost', True)
 gui.attributes('-topmost', False)
 gui.center()
-gui.mainloop()
+gui.show()
+if gui.save_content:
+    lines = lines[:chem_start]
+    for reaction in reactions:
+        line = ""
+        if reaction.is_sticky:
+            lines.append("STICK\n")
+        if reaction.is_disabled:
+            line += "*"
+        for educt in reaction.educts:
+            for i in range(reaction.educts[educt]):
+                line += str(educt).ljust(8)
+                line += "+"
+        line = line[:-1]
+        if reaction.is_reversible:
+            line += "="
+        else:
+            line += ">"
+        for product in reaction.products:
+            for i in range(reaction.products[product]):
+                line += str(product).ljust(8)
+                line += "+"
+        line = line[:-1]
+        line = line.ljust(45)
+        line += "{:10.3E}".format(reaction.A_k)
+        line += "{:7G}".format(reaction.beta_k)
+        line += "{:10G}".format(reaction.E_k)
+        line += "\n"
+        lines.append(line)
+
+    file = open(dir_name.split(".")[0] + "edit.txt", 'w')
+    file.writelines(lines)
+    file.close()

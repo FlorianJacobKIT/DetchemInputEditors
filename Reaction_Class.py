@@ -35,19 +35,19 @@ class Reaction(Checkable, SelfFixing):
         for key, value in self.products.items():
             text += str(value) + str(key) + " + "
         text= text[:-3]
-        text= text.ljust(50)
-        text= text + "{:10.3E}".format(self.A_k).ljust(10) + "   "
+        text= text.ljust(55)
+        text += " | "
+        text = text.ljust(60)
+        text= text + "{:10.3E}".format(self.A_k).rjust(10) + "   "
         beta_str = "{:g}".format(self.beta_k)
-        if beta_str == "0":
-            beta_str = "0.0"
-        text= text + beta_str.ljust(7) + "   "
-        text= text + "{:10.1E}".format(self.E_k).ljust(10) + "   "
+        text= text + beta_str.rjust(7) + "   "
+        text= text + "{:g}".format(self.E_k).rjust(10) + "   "
         if self.is_sticky:
             text= text + "stick"
-        text = text.ljust(95)
+        text = text.ljust(105)
         if self.is_disabled:
             text= text + "disabled"
-        text = text.ljust(110)
+        text = text.ljust(120)
         return text
 
     def check(self) -> bool:

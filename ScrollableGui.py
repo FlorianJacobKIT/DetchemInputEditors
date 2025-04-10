@@ -13,6 +13,7 @@ class ListGui(tkinter.Tk,CenterGui):
     listbox: Listbox = None
     reaction_mapper = {}
     placeholder = 'Search'
+    save_content = False
 
     def __init__(self):
         super().__init__()
@@ -90,6 +91,7 @@ class ListGui(tkinter.Tk,CenterGui):
             self.destroy()
 
     def save(self):
+        self.save_content = True
         self.destroy()
 
     def update_search(self, filter_txtstr):
@@ -117,5 +119,7 @@ class ListGui(tkinter.Tk,CenterGui):
             entry_nr += 1
         self.listbox.update()
 
-
+    def show(self):
+        self.wm_deiconify()
+        self.wait_window()
 
