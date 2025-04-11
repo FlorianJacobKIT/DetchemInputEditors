@@ -28,7 +28,10 @@ class ListGui(CenterRootWindow):
         search_var.set("Search")
         search_bar = tkinter.Entry(self, textvariable=search_var, fg="gray")
         search_bar.grid(column=0, row=0, sticky="ew")
-        search_var.trace("w", lambda name,index,mode: self.update_search(search_var.get()))
+        search_var.trace("w", lambda name,index,mode: self.update_search())
+
+        help_label = tkinter.Label(self, text="\'*:\' Fuzzy Search" + " "*5  + "\'e:\' Search in Educts" + " "*5  + "\'p:\' Search in Products")
+        help_label.grid(column=1, row=0, columnspan = 2, sticky="ew")
 
 
         def erase(event=None):
@@ -99,7 +102,7 @@ class ListGui(CenterRootWindow):
             reaction = global_vars.reactions[reaction_idx[0]][reaction_idx[1]]
             EditorGui.UniversalEditorGui(reaction).show()
         self.update_data()
-        self.update_search(self.search_var.get())
+        self.update_search()
 
     def ask_destroy(self):
         answer = tkinter.messagebox.askokcancel("Don't save", "Are you sure you don't want to save?")
@@ -110,23 +113,68 @@ class ListGui(CenterRootWindow):
         self.save_content = type
         self.destroy()
 
-    def update_search(self, filter_txtstr):
+    def update_search(self):
+        filter_txtstr = self.search_var.get()
         if filter_txtstr == self.placeholder:
-            filter_txtstr = ""
+            filter_txtstr = "*:"
         self.listbox.delete(0, END)
         entry_nr = 0
         self.reaction_mapper = {}
         i = 0
+        mode = ""
+        if filter_txtstr.startswith("e:"):
+            mode = "e"
+            filter_txtstr = filter_txtstr.replace("e:", "", 1).strip().upper()
+        elif filter_txtstr.startswith("p:"):
+            mode = "p"
+            filter_txtstr = filter_txtstr.replace("p:", "", 1).strip().upper()
+        elif filter_txtstr.startswith("*:"):
+            mode = "*"
+            filter_txtstr = filter_txtstr.replace("*:", "", 1).strip().upper()
+
+
         for category in global_vars.reactions.keys():
             self.listbox.insert(END, str(category).ljust(120,"-"))
             self.reaction_mapper[entry_nr] = (category, -1)
             entry_nr += 1
-            for index in range(len(global_vars.reactions[category])):
-                text = str(global_vars.reactions[category][index])
-                if filter_txtstr.upper() in text.upper():
-                    self.listbox.insert(END, text)
-                    self.reaction_mapper[entry_nr] = (category, index)
-                    entry_nr += 1
+            if category not in self.hidden_categorys:
+                for index in range(len(global_vars.reactions[category])):
+                    text = str(global_vars.reactions[category][index])
+                    if mode == "e":
+                        for educt in global_vars.reactions[category][index].educts:
+                            if filter_txtstr == educt.strip().upper():
+                                self.listbox.insert(END, text)
+                                self.reaction_mapper[entry_nr] = (category, index)
+                                entry_nr += 1
+                                break
+                    elif mode == "p":
+                        for product in global_vars.reactions[category][index].products:
+                            if filter_txtstr == product.strip().upper():
+                                self.listbox.insert(END, text)
+                                self.reaction_mapper[entry_nr] = (category, index)
+                                entry_nr += 1
+                                break
+                    elif mode == "*":
+                        if filter_txtstr in text.upper():
+                            self.listbox.insert(END, text)
+                            self.reaction_mapper[entry_nr] = (category, index)
+                            entry_nr += 1
+                    else:
+                        flag = True
+                        for educt in global_vars.reactions[category][index].educts:
+                            if filter_txtstr.strip().upper() == educt.strip().upper():
+                                self.listbox.insert(END, text)
+                                self.reaction_mapper[entry_nr] = (category, index)
+                                entry_nr += 1
+                                flag = False
+                                break
+                        if flag:
+                            for product in global_vars.reactions[category][index].products:
+                                if filter_txtstr.strip().upper() == product.strip().upper():
+                                    self.listbox.insert(END, text)
+                                    self.reaction_mapper[entry_nr] = (category, index)
+                                    entry_nr += 1
+                                    break
         self.listbox.update()
 
     def update_data(self):
