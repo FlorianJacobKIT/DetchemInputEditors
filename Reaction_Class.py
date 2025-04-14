@@ -3,8 +3,10 @@ import tkinter.messagebox
 
 class Reaction(Checkable, SelfFixing):
 
-    educts: dict[str,int] = {}
-    products: dict[str,int] = {}
+    educts: dict[str,int]
+    products: dict[str,int]
+    orders: dict[str,float]
+    epsilon: dict[str,float]
     A_k = 0
     beta_k = 0
     E_k = 0
@@ -13,7 +15,13 @@ class Reaction(Checkable, SelfFixing):
     is_disabled = False
     category = ""
 
-    def __init__(self, educts, products, A_k, beta_k, E_k, category:str, is_sticky = False, is_reversible = False, is_disabled = False):
+    def __init__(self, category:str, educts=None, products=None, A_k = 0, beta_k = 0, E_k = 0, is_sticky = False, is_reversible = False, is_disabled = False):
+        self.orders = {}
+        self.epsilon = {}
+        if products is None:
+            products = {}
+        if educts is None:
+            educts = {}
         self.educts = educts
         self.products = products
         self.A_k = A_k
@@ -66,5 +74,7 @@ class Reaction(Checkable, SelfFixing):
     def fix(self) -> None:
         self.educts = {k: v for k, v in self.educts.items() if v>0}
         self.products = {k: v for k, v in self.products.items() if v>0}
+        self.epsilon = {k: v for k, v in self.epsilon.items() if v!=0}
+        self.orders = {k: v for k, v in self.orders.items() if v!=0}
 
 

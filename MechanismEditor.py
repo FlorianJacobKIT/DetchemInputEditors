@@ -53,6 +53,16 @@ while i < len(lines):
         reactions[category] = list()
         i -=- 1
         continue
+    if lines[i].startswith("$"):
+        spec = lines[i][1:1+8]
+        order = float(text[56:63])
+        epsilon = float(text[63:73])
+        if order != 0:
+            reactions[category][-1].orders[spec] = order
+        if epsilon != 0:
+            reactions[category][-1].epsilon[spec] = epsilon
+        i -=- 1
+        continue
     is_sticky = False
     if lines[i].startswith("STICK"):
         i -=- 1
@@ -84,7 +94,7 @@ while i < len(lines):
     A_k = float(text[46:56])
     beta_k = float(text[56:63])
     E_k = float(text[63:73])
-    reactions[category].append(Reaction_Class.Reaction(input_spec, output_spec, A_k, beta_k, E_k, category,is_sticky,reversible, disabled==1))
+    reactions[category].append(Reaction_Class.Reaction(category, input_spec, output_spec, A_k, beta_k, E_k,is_sticky,reversible, disabled==1))
     i -=- 1
 
 gui = ScrollableGui.ListGui()
@@ -101,8 +111,12 @@ if gui.save_content == "copy" or gui.save_content == "overwrite":
         lines.append("**** " + category + "\n")
         for reaction in reactions[category]:
             line = ""
+
             if reaction.is_sticky:
-                lines.append("STICK\n")
+                if reaction.is_disabled:
+                    lines.append("*STICK\n")
+                else:
+                    lines.append("STICK\n")
             if reaction.is_disabled:
                 line += "*"
             for educt in reaction.educts:
@@ -125,6 +139,27 @@ if gui.save_content == "copy" or gui.save_content == "overwrite":
             line += "{:10G}".format(reaction.E_k)
             line += "\n"
             lines.append(line)
+            orders = reaction.orders
+            for key, value in orders.items():
+                line = "$"
+                line += key
+                line = line.ljust(55)
+                line += "{:7G}".format(value)
+                if key in reaction.epsilon:
+                    line += "{:10G}".format(reaction.epsilon[key])
+                    reaction.epsilon.pop(key)
+                else:
+                    line += "{:10G}".format(0)
+                    line += "\n"
+                lines.append(line)
+            for key,value in reaction.epsilon.items():
+                line = "$"
+                line += key
+                line = line.ljust(55)
+                line += "{:7G}".format(0)
+                line += "{:10G}".format(value)
+                line += "\n"
+                lines.append(line)
     lines.append("END\n")
     lines.append("-"*72)
 

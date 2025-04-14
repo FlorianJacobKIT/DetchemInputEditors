@@ -5,6 +5,7 @@ from tkinter import *
 from CenterGui import CenterRootWindow
 import EditorGui
 import global_vars
+from Reaction_Class import Reaction
 
 
 class ListGui(CenterRootWindow):
@@ -31,7 +32,10 @@ class ListGui(CenterRootWindow):
         search_var.trace("w", lambda name,index,mode: self.update_search())
 
         help_label = tkinter.Label(self, text="\'*:\' Fuzzy Search" + " "*5  + "\'e:\' Search in Educts" + " "*5  + "\'p:\' Search in Products")
-        help_label.grid(column=1, row=0, columnspan = 2, sticky="ew")
+        help_label.grid(column=1, row=0, sticky="ew")
+
+        new_btn = tkinter.Button(self,text="New Reaction",command=self.add_reaction)
+        new_btn.grid(column=2, row=0, sticky="ew")
 
 
         def erase(event=None):
@@ -116,6 +120,8 @@ class ListGui(CenterRootWindow):
     def update_search(self):
         filter_txtstr = self.search_var.get()
         if filter_txtstr == self.placeholder:
+            filter_txtstr = "*:"
+        if filter_txtstr == "":
             filter_txtstr = "*:"
         self.listbox.delete(0, END)
         entry_nr = 0
@@ -206,4 +212,12 @@ class ListGui(CenterRootWindow):
     def show(self):
         self.wm_deiconify()
         self.wait_window()
+
+    def add_reaction(self):
+        firstKey = list(global_vars.reactions.keys())[0]
+        reaction = Reaction(category=firstKey)
+        global_vars.reactions[firstKey].append(reaction)
+        EditorGui.UniversalEditorGui(reaction).show()
+        self.update_data()
+        self.update_search()
 
