@@ -4,6 +4,7 @@ import tkinter.messagebox
 import tkinter.simpledialog
 import copy
 
+import Interfaces
 import Reaction_Class
 from CenterGui import CenterWindow
 from Interfaces import Checkable,SelfFixing
@@ -11,13 +12,15 @@ from Interfaces import Checkable,SelfFixing
 
 class UniversalEditorGui(CenterWindow):
 
-    entry_vars: dict[tkinter.Variable] = {}
-    reaction: Reaction_Class.Reaction = None
+    entry_vars: dict[str,tkinter.Variable] = {}
+    reaction: Interfaces.EditorAdjusted
 
-    def __init__(self, reaction: Reaction_Class.Reaction):
+    def __init__(self, to_edit: Interfaces.EditorAdjusted):
         super().__init__()
+        if not isinstance(to_edit, Interfaces.EditorAdjusted):
+            raise TypeError("to_edit must inherit the type Interfaces.EditorAdjusted")
         self.entry_vars = {}
-        self.reaction = reaction
+        self.reaction = to_edit
         self.focus_set()
         self.generate_fields()
 
@@ -25,7 +28,14 @@ class UniversalEditorGui(CenterWindow):
         dict_version = self.reaction.__dict__
         self.grid_columnconfigure(1, weight=1)
         i = 0
+        no_show = self.reaction.no_show()
+        no_edit = self.reaction.no_edit()
         for key, value in dict_version.items():
+            if key in no_show:
+                continue
+            state = tkinter.NORMAL
+            if key in no_edit:
+                state = tkinter.DISABLED
             if type(value) == dict:
                 frame = tkinter.Frame(self, name=key, borderwidth=2, relief=tkinter.RIDGE)
                 frame.grid(column=0, row=i, columnspan=2, sticky="nsew", pady=2)
@@ -33,7 +43,7 @@ class UniversalEditorGui(CenterWindow):
                 sub_dict = dict_version[key]
                 label = tkinter.Label(frame, text=key, font=("FixedSys", 12, "bold"), anchor=tkinter.W)
                 label.grid(column=0, row=0, columnspan=1, sticky="w")
-                add_btn = tkinter.Button(frame, text="+", command=lambda d=value: self.add(d))
+                add_btn = tkinter.Button(frame, text="+", command=lambda d=value: self.add(d), state=state)
                 add_btn.grid(column=1, row=0, sticky="ew")
                 j = 1
                 for dict_key, dict_value in sub_dict.items():
@@ -42,7 +52,7 @@ class UniversalEditorGui(CenterWindow):
                     label.grid(column=0, row=j, sticky="nsew")
                     self.entry_vars[key + ":" + dict_key] = getVar(sub_element)
                     self.entry_vars[key + ":" + dict_key].set(sub_element)
-                    entry = tkinter.Entry(frame, textvariable=self.entry_vars[key + ":" + dict_key])
+                    entry = tkinter.Entry(frame, textvariable=self.entry_vars[key + ":" + dict_key], state=state)
                     entry.grid(column=1, row=j, sticky="nsew")
                     rem_btn = tkinter.Button(frame, text="-", command=lambda k=dict_key, d=dict_version[key]: self.remove_entry(d, k))
                     rem_btn.grid(column=2, row=j, sticky="nsew")
@@ -61,7 +71,7 @@ class UniversalEditorGui(CenterWindow):
                 label.grid(column=0, row=i, sticky="w")
                 self.entry_vars[key] = tkinter.BooleanVar()
                 self.entry_vars[key].set(sub_bool)
-                entry = tkinter.Button(self, text="On" if self.entry_vars[key].get() else "Off")
+                entry = tkinter.Button(self, text="On" if self.entry_vars[key].get() else "Off", state=state)
                 entry.config(command=lambda k=key,btn= entry: self.update_btn(k, btn))
                 entry.grid(column=1, row=i, sticky="nsew")
             elif type(value) == float:
@@ -70,7 +80,7 @@ class UniversalEditorGui(CenterWindow):
                 label.grid(column=0, row=i, sticky="w")
                 self.entry_vars[key] = tkinter.DoubleVar()
                 self.entry_vars[key].set(sub_float)
-                entry = tkinter.Entry(self, textvariable=self.entry_vars[key])
+                entry = tkinter.Entry(self, textvariable=self.entry_vars[key], state=state)
                 entry.grid(column=1, row=i, sticky = "nsew")
             elif type(value) == int:
                 sub_int = dict_version[key]
@@ -78,7 +88,7 @@ class UniversalEditorGui(CenterWindow):
                 label.grid(column=0, row=i, sticky="w")
                 self.entry_vars[key] = tkinter.IntVar()
                 self.entry_vars[key].set(sub_int)
-                entry = tkinter.Entry(self, textvariable=self.entry_vars[key])
+                entry = tkinter.Entry(self, textvariable=self.entry_vars[key], state=state)
                 entry.grid(column=1, row=i, sticky = "nsew")
             else:
                 sub_element = dict_version[key]
@@ -86,7 +96,7 @@ class UniversalEditorGui(CenterWindow):
                 label.grid(column=0, row=i, sticky="w")
                 self.entry_vars[key] = tkinter.StringVar()
                 self.entry_vars[key].set(str(sub_element))
-                entry = tkinter.Entry(self, textvariable=self.entry_vars[key])
+                entry = tkinter.Entry(self, textvariable=self.entry_vars[key], state=state)
                 entry.grid(column=1, row=i, sticky = "nsew")
 
             i -= - 1

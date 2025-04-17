@@ -2,6 +2,7 @@ from tkinter import filedialog
 
 import Reaction_Class
 import ScrollableGui
+import adjust_util.ThermalDataReader
 import global_vars
 
 ### IMPORTANT ###
@@ -40,6 +41,7 @@ else:
 
 
 reactions = global_vars.reactions
+species = global_vars.species
 reactions[category] = list()
 while i < len(lines):
     text = lines[i]
@@ -79,6 +81,8 @@ while i < len(lines):
     while j < 47-8 + disabled:
         spec = text[j:j+8].strip()
         if spec != "":
+            if spec not in species:
+                species[spec] = None
             if sign == 1:
                 input_spec[spec] = input_spec.get(spec, 0) + 1
             else:
@@ -96,6 +100,12 @@ while i < len(lines):
     E_k = float(text[63:73])
     reactions[category].append(Reaction_Class.Reaction(category, input_spec, output_spec, A_k, beta_k, E_k,is_sticky,reversible, disabled==1))
     i -=- 1
+
+adjust_util.ThermalDataReader.read_all_file("thermdata.txt")
+for spec in species:
+    if spec not in global_vars.thermalDataMap:
+        raise KeyError("Species '" + spec + "' not found in thermdata.txt")
+    species[spec] = global_vars.thermalDataMap[spec]
 
 gui = ScrollableGui.ListGui()
 gui.focus_set()

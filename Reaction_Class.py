@@ -1,7 +1,7 @@
-from Interfaces import Checkable, SelfFixing
+from Interfaces import Checkable, SelfFixing, EditorAdjusted
 import tkinter.messagebox
 
-class Reaction(Checkable, SelfFixing):
+class Reaction(Checkable, SelfFixing, EditorAdjusted):
 
     educts: dict[str,int]
     products: dict[str,int]
@@ -10,10 +10,26 @@ class Reaction(Checkable, SelfFixing):
     A_k = 0
     beta_k = 0
     E_k = 0
-    is_sticky = False
+    old_A_k = 0
+    old_beta_k = 0
+    old_E_k = 0
+    is_stick = False
     reversible = False
     is_disabled = False
     category = ""
+    weight = 1
+    is_adjustable = True
+
+    def no_show(self) -> list[str]:
+        elements = list()
+        elements.append("old_A_k")
+        elements.append("old_beta_k")
+        elements.append("old_E_k")
+        return elements
+
+    def no_edit(self) -> list[str]:
+        elements = list()
+        return elements
 
     def __init__(self, category:str, educts=None, products=None, A_k = 0, beta_k = 0, E_k = 0, is_sticky = False, is_reversible = False, is_disabled = False):
         self.orders = {}
@@ -24,13 +40,26 @@ class Reaction(Checkable, SelfFixing):
             educts = {}
         self.educts = educts
         self.products = products
-        self.A_k = A_k
-        self.beta_k = beta_k
-        self.E_k = E_k
+        self.A_k = self.old_A_k = A_k
+        self.beta_k = self.old_beta_k = beta_k
+        self.E_k = self.old_E_k = E_k
         self.is_sticky = is_sticky
         self.is_reversible = is_reversible
         self.is_disabled = is_disabled
         self.category = category
+        self.is_adjustable = True
+        self.weight = 1.0
+
+    def update_old_values(self):
+        self.old_A_k = self.A_k
+        self.old_beta_k = self.beta_k
+        self.old_E_k = self.E_k
+
+    def set_adjustable(self, value):
+        self.is_adjustable = value
+
+    def set_weight(self, weight):
+        self.weight = weight
 
     def __str__(self):
         text = ""
