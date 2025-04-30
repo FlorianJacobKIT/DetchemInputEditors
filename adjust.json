@@ -1,0 +1,23 @@
+{
+  "T_ref_comment": "Each temperatur range specifies a area to fit the energy balance. Only one is required, enter more ranges if certain ranges are more important.",
+  "T_ref_value": [
+    {
+      "T_max": 700,
+      "T_min": 300,
+      "T_step": 20
+    }
+  ],
+  "flag_weight_comment": "All flagged reactions get this weight",
+  "flag_weight_value": 1,
+  "surface_side_comment": "All Surface sides. The name will given, will be searched in the species to determine the surface species. If a species does not follow that convention, add it in the special_surface_species list",
+  "surface_side_value": {
+    "(a)": {
+      "special_surface_species": {"(a)": 1},
+      "surface_side_density": 3.554e-09
+    },
+    "(b)": {
+      "special_surface_species": {"(b)": 1},
+      "surface_side_density": 3.554e-09
+    }
+  }
+}

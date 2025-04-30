@@ -7,3 +7,4 @@ species: dict[str,Species|None] = dict()
 
 thermalDataMap: dict[str, Species]
 defaultMapping: dict[str,str]
+parent: str

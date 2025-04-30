@@ -1,5 +1,7 @@
 
 import math
+from typing import Callable
+
 
 def gcd(a,b):
     while(b):
@@ -38,7 +40,11 @@ class LinearCombination(object):
         s=""
         for i,a in list(self.d.items()):
             if a!=1 : s=s+str(a)+" "
-            s=s+"<"+str(i)+"> + "
+            try:
+                name = i.name
+            except AttributeError:
+                name = str(i)
+            s=s+"<"+name+"> + "
         if self.c or len(self.d)==0:
             return s+str(self.c)
         else:
@@ -96,8 +102,8 @@ class LinearCombination(object):
         else:
             self.c/=f
         
-    def variables(self,instanceof=object):
-        return [i for i in list(self.d.keys()) if isinstance(i,instanceof)]
+    def variables(self,filter_func:Callable[[object],bool] = lambda a:True):
+        return [i for i in list(self.d.keys()) if filter_func(i)]
     def coefficient(self,variable=None):
         if variable==None : return self.c
         return self.d.get(variable,0)
@@ -192,15 +198,19 @@ class LinearEquationSystem(list):
     def __str__(self):
         s=""
         for eq in self:
-            s=s+str(eq)+'\n'
+            try:
+                name = eq.name
+            except AttributeError:
+                name = str(eq)
+            s=s+name+'\n'
         return s
     def add(self,left,right=0):
         eq=left-right
         if eq : self.append(eq)
-    def variables(self,instanceof=object):
+    def variables(self,filter_func:Callable[[object],bool]= lambda a:True):
         V=set()
         for eq in self:
-            V=V | set(eq.variables(instanceof))
+            V=V | set(eq.variables(filter_func))
         return list(V)
     def replace(self,vdict,deep=False):
         for eq in self:

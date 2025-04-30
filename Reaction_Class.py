@@ -1,5 +1,19 @@
-from Interfaces import Checkable, SelfFixing, EditorAdjusted
+import math
 import tkinter.messagebox
+from typing import Callable
+
+from Interfaces import Checkable, SelfFixing, EditorAdjusted
+from adjust_util import ThermalDataReader
+from adjust_util.MaterialData import Species
+from adjust_util.Nat_Constants import R
+from adjust_util.logarrhenius import logArrheniusTerm
+
+reaction_counter = 0
+
+def get_reaction_counter():
+    global reaction_counter
+    reaction_counter += 1
+    return reaction_counter
 
 class Reaction(Checkable, SelfFixing, EditorAdjusted):
 
@@ -7,31 +21,38 @@ class Reaction(Checkable, SelfFixing, EditorAdjusted):
     products: dict[str,int]
     orders: dict[str,float]
     epsilon: dict[str,float]
-    A_k = 0
-    beta_k = 0
+    _A_k = 0
+    _beta_k = 0
     E_k = 0
     old_A_k = 0
     old_beta_k = 0
     old_E_k = 0
     is_stick = False
-    reversible = False
+    is_reversible = False
+    _reverse_reaction = None
     is_disabled = False
     category = ""
     weight = 1
     is_adjustable = True
+    exponent = -2
+    reaction_id: int = None
+
 
     def no_show(self) -> list[str]:
         elements = list()
         elements.append("old_A_k")
         elements.append("old_beta_k")
         elements.append("old_E_k")
+        elements.append("_reverse_reaction")
         return elements
 
     def no_edit(self) -> list[str]:
         elements = list()
         return elements
 
-    def __init__(self, category:str, educts=None, products=None, A_k = 0, beta_k = 0, E_k = 0, is_sticky = False, is_reversible = False, is_disabled = False):
+    def __init__(self, category:str, educts=None, products=None, A_k = 0, beta_k = 0, E_k = 0, is_stick = False, is_reversible = False, is_disabled = False):
+        import global_vars
+        self.reaction_id = get_reaction_counter()
         self.orders = {}
         self.epsilon = {}
         if products is None:
@@ -40,15 +61,60 @@ class Reaction(Checkable, SelfFixing, EditorAdjusted):
             educts = {}
         self.educts = educts
         self.products = products
-        self.A_k = self.old_A_k = A_k
-        self.beta_k = self.old_beta_k = beta_k
-        self.E_k = self.old_E_k = E_k
-        self.is_sticky = is_sticky
+        self._A_k = A_k
+        self._beta_k = beta_k
+        self.E_k = E_k
+        self.is_stick = is_stick
         self.is_reversible = is_reversible
         self.is_disabled = is_disabled
         self.category = category
         self.is_adjustable = True
         self.weight = 1.0
+        if self.is_reversible:
+            reverse_reaction = Reaction(category,products,educts,A_k,beta_k,E_k,False,False,is_disabled)
+            self._reverse_reaction = reverse_reaction
+        if is_stick:
+            gas = None
+            cfactor = 1
+            self.weight = 4.0
+            for spec in educts:
+                species = global_vars.species[spec]
+                if not species.is_adsorpt():
+                    if gas is None:
+                        gas = species
+                    else:
+                        print("Error in Stick Reaction:", str(self))
+                        raise AssertionError("Multiple Gas Species in Stick Reaction")
+                else:
+                    cfactor *= (species.gamma) ** self.educts[spec]
+
+
+            if gas is None:
+                print("Error in Stick Reaction:",str(self))
+                raise AssertionError("Stick Reaction is missing gas species")
+            # g/mol -> kg/mol
+            weight = gas.get_weight()/1e3
+
+            self.temperature_independent_term = \
+                math.sqrt(R / 2 / math.pi / weight) / cfactor
+            print(self.reaction_id, self.temperature_independent_term)
+        self.update_old_values()
+
+    @property
+    def name(self):
+        return "R" + str(self.reaction_id)
+
+    @property
+    def reverse_reaction(self):
+        return self._reverse_reaction
+
+    @reverse_reaction.setter
+    def reverse_reaction(self, value):
+        self.is_reversible = True
+        self._reverse_reaction = value
+        value.educts = self.products
+        value.products = self.educts
+
 
     def update_old_values(self):
         self.old_A_k = self.A_k
@@ -77,11 +143,11 @@ class Reaction(Checkable, SelfFixing, EditorAdjusted):
         text= text.ljust(55)
         text += " | "
         text = text.ljust(60)
-        text= text + "{:10.3E}".format(self.A_k).rjust(10) + "   "
-        beta_str = "{:g}".format(self.beta_k)
+        text= text + "{:10.3E}".format(self._A_k).rjust(10) + "   "
+        beta_str = "{:g}".format(self._beta_k)
         text= text + beta_str.rjust(7) + "   "
         text= text + "{:g}".format(self.E_k).rjust(10) + "   "
-        if self.is_sticky:
+        if self.is_stick:
             text= text + "stick"
         text = text.ljust(105)
         if self.is_disabled:
@@ -105,5 +171,72 @@ class Reaction(Checkable, SelfFixing, EditorAdjusted):
         self.products = {k: v for k, v in self.products.items() if v>0}
         self.epsilon = {k: v for k, v in self.epsilon.items() if v!=0}
         self.orders = {k: v for k, v in self.orders.items() if v!=0}
+        self.reverse_reaction.educts = self.products
+        self.reverse_reaction.products = self.educts
+
+    @property
+    def A_k(self):
+        if self.is_stick:
+            return self._A_k * self.temperature_independent_term
+        return self._A_k
+
+    @A_k.setter
+    def A_k(self, value):
+        if self.is_stick:
+            self._A_k=value/self.temperature_independent_term
+        else:
+            self._A_k = value
+
+    @property
+    def sticking_coefficient(self):
+        return self._A_k
+
+    @property
+    def beta_k(self):
+        if self.is_stick:
+            return self._beta_k + 0.5
+        return self._beta_k
+
+    @beta_k.setter
+    def beta_k(self, value):
+        if self.is_stick:
+            self._beta_k = value - 0.5
+        else:
+            self._beta_k = value
+
+    def get_E_k(self):
+        if self.is_stick:
+            return self.E_k
+        return self.E_k
+
+    def get_logkf(self):
+        return logArrheniusTerm(math.log(self.A_k), self.beta_k, -self.E_k / R)
+
+    def Kp2Kc(self, T):
+        K = 1.0
+        for s, stoic in self.educts.items():
+            spec = ThermalDataReader.find_species(s)
+            K /= (spec.c0(T)) ** stoic
+        for s, stoic in self.products.items():
+            spec = ThermalDataReader.find_species(s)
+            K *= (spec.c0(T)) ** stoic
+        return K
+
+    def sum_F(self,generic_function:Callable[[Species],float]):
+        value=0
+        for s,stoic in list(self.educts.items()):
+            spec = ThermalDataReader.find_species(s)
+            value -= stoic*generic_function(spec)
+        for s,stoic in list(self.products.items()):
+            spec = ThermalDataReader.find_species(s)
+            value += stoic*generic_function(spec)
+        return value
+
+    def deltaG_const(self, T):
+        func = lambda s: s.G_const(T)
+        return self.sum_F(func)
+
+    def deltaG_RT_adjustable(self):
+        return self.sum_F(lambda s : s.G_adjustable())
 
 

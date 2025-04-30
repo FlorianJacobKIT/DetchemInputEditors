@@ -1,19 +1,56 @@
+import math
+import os
 from tkinter import filedialog
 
+import global_vars
 import Reaction_Class
 import ScrollableGui
 import adjust_util.ThermalDataReader
-import global_vars
+from Text_Util import add_reaction_to_line
+from adjust_util.AdjustData import *
+from adjustclass import AdjustClass
 
 ### IMPORTANT ###
 # Lines starting with one start (*) will be seen as disabled reactions
 # Lines starting with two or more stars (**) will be seen as comments, the last one as the category
 # When you add a comment with only one star (*), this code will cause errors and might corrupt your file
 
+
+
+
+
 dir_name = filedialog.askopenfilename()
 
 if dir_name == "":
     exit(0)
+
+global_vars.parent = os.path.dirname(dir_name)
+
+
+
+inp_file_name = os.path.join(global_vars.parent, "adjust.json")
+if not os.path.isfile(inp_file_name):
+    inp_file_name = os.path.join(global_vars.parent, "adjust.txt")
+    if not os.path.isfile(inp_file_name):
+        newData = AdjustDataHolder()
+        newData.surface_side_value["surface_name"] = Surface(surface_side_density=1.01e-09)
+        newData.T_ref_value = [TemperatureRange(700,300,20)]
+        newData.flag_weight_value = 1
+        json_Version = newData.toJSON(True)
+        inp_file_name = os.path.join(global_vars.parent, "adjust.json")
+        with open(inp_file_name, "w") as f:
+            f.write(json_Version)
+        raise FileNotFoundError("Could not find adjust.json or adjust.txt file. Created adjust.json file. Please adjust it to your needs")
+
+target = open(inp_file_name, "r")
+coder = target.read()
+target.close()
+data = AdjustDataHolder()
+data.fromJSON(coder)
+A = AdjustClass()
+A.adjust_data = data
+
+adjust_util.ThermalDataReader.read_all_file(os.path.join(global_vars.parent, "thermdata.txt"), data)
 
 file = open(dir_name, 'r')
 lines = file.readlines()
@@ -65,10 +102,10 @@ while i < len(lines):
             reactions[category][-1].epsilon[spec] = epsilon
         i -=- 1
         continue
-    is_sticky = False
-    if lines[i].startswith("STICK"):
+    is_stick = False
+    if lines[i].startswith("STICK") or lines[i].startswith("*STICK"):
         i -=- 1
-        is_sticky = True
+        is_stick = True
         text = lines[i]
     disabled = 0
     if lines[i].startswith("*"):
@@ -78,13 +115,20 @@ while i < len(lines):
     j = 0 + disabled
     sign = 1
     reversible = False
+    exponent = -2
     while j < 47-8 + disabled:
         spec = text[j:j+8].strip()
         if spec != "":
             if spec not in species:
-                species[spec] = None
+                if spec not in global_vars.thermalDataMap:
+                    raise KeyError("Species '" + spec + "' not found in thermdata.txt")
+                species[spec] = global_vars.thermalDataMap[spec]
             if sign == 1:
                 input_spec[spec] = input_spec.get(spec, 0) + 1
+                if species[spec].is_adsorpt():
+                    exponent = exponent + 2
+                else:
+                    exponent = exponent + 3
             else:
                 output_spec[spec] = output_spec.get(spec, 0) + 1
         j -=- 8
@@ -96,18 +140,54 @@ while i < len(lines):
             reversible = True
         j -=- 1
     A_k = float(text[46:56])
+    # Mol/cm2 -> Mol/m2 and Mol/cm3 -> Mol/m3
+    A_k = A_k / 100**exponent
     beta_k = float(text[56:63])
-    E_k = float(text[63:73])
-    reactions[category].append(Reaction_Class.Reaction(category, input_spec, output_spec, A_k, beta_k, E_k,is_sticky,reversible, disabled==1))
+    # kJ/mol -> J/mol
+    E_k = float(text[63:73]) * 1e3
+    reaction = Reaction_Class.Reaction(category, input_spec, output_spec, A_k, beta_k, E_k,is_stick,reversible, disabled==1)
+    reaction.exponent = exponent
+    reactions[category].append(reaction)
     i -=- 1
 
-adjust_util.ThermalDataReader.read_all_file("thermdata.txt")
-for spec in species:
-    if spec not in global_vars.thermalDataMap:
-        raise KeyError("Species '" + spec + "' not found in thermdata.txt")
-    species[spec] = global_vars.thermalDataMap[spec]
+all_reactions = list()
+remove_reactions = list()
+for category in reactions:
+    all_reactions.extend(reactions[category])
+found_reverses = 0
+for reaction in all_reactions:
+    for compare_reaction in all_reactions:
+        if reaction == compare_reaction:
+            continue
+        if reaction.educts == compare_reaction.products:
+            if reaction.products == compare_reaction.educts:
+                if reaction.reverse_reaction is not None:
+                    if reaction.reverse_reaction != compare_reaction:
+                        print(reaction)
+                        print(compare_reaction)
+                        print(reaction.reverse_reaction)
+                        raise  ValueError("Multiple Reactions are equivalent")
+                else:
+                    if compare_reaction.is_stick:
+                        remove_reactions.append(reaction)
+                    else:
+                        remove_reactions.append(compare_reaction)
+                    reaction.reverse_reaction = compare_reaction
+                    compare_reaction.reverse_reaction = reaction
 
-gui = ScrollableGui.ListGui()
+for category in reactions:
+    for remove in remove_reactions:
+        if remove in reactions[category]:
+            reactions[category].remove(remove)
+
+for category in reactions:
+    for reaction in reactions[category]:
+        if reaction.reverse_reaction is not None:
+            reaction.reverse_reaction.is_reversible = False
+
+
+
+gui = ScrollableGui.ListGui(A)
 gui.focus_set()
 gui.title("Reaction Gui")
 gui.lift()
@@ -115,61 +195,21 @@ gui.attributes('-topmost', True)
 gui.attributes('-topmost', False)
 gui.center()
 gui.show()
+
+
+
+
+
 if gui.save_content == "copy" or gui.save_content == "overwrite":
     lines = lines[:chem_start]
     for category in reactions:
         lines.append("**** " + category + "\n")
         for reaction in reactions[category]:
-            line = ""
-
-            if reaction.is_sticky:
-                if reaction.is_disabled:
-                    lines.append("*STICK\n")
-                else:
-                    lines.append("STICK\n")
-            if reaction.is_disabled:
-                line += "*"
-            for educt in reaction.educts:
-                for i in range(reaction.educts[educt]):
-                    line += str(educt).ljust(8)
-                    line += "+"
-            line = line[:-1]
+            add_reaction_to_line(reaction, lines)
             if reaction.is_reversible:
-                line += "="
-            else:
-                line += ">"
-            for product in reaction.products:
-                for i in range(reaction.products[product]):
-                    line += str(product).ljust(8)
-                    line += "+"
-            line = line[:-1]
-            line = line.ljust(45)
-            line += "{:10.3E}".format(reaction.A_k)
-            line += "{:7G}".format(reaction.beta_k)
-            line += "{:10G}".format(reaction.E_k)
-            line += "\n"
-            lines.append(line)
-            orders = reaction.orders
-            for key, value in orders.items():
-                line = "$"
-                line += key
-                line = line.ljust(55)
-                line += "{:7G}".format(value)
-                if key in reaction.epsilon:
-                    line += "{:10G}".format(reaction.epsilon[key])
-                    reaction.epsilon.pop(key)
-                else:
-                    line += "{:10G}".format(0)
-                    line += "\n"
-                lines.append(line)
-            for key,value in reaction.epsilon.items():
-                line = "$"
-                line += key
-                line = line.ljust(55)
-                line += "{:7G}".format(0)
-                line += "{:10G}".format(value)
-                line += "\n"
-                lines.append(line)
+                reaction = reaction.reverse_reaction
+                add_reaction_to_line(reaction,lines)
+
     lines.append("END\n")
     lines.append("-"*72)
 

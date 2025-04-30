@@ -1,6 +1,8 @@
 import math
-import algebra
-from Nat_Constants import R
+
+import adjust_util.algebra as algebra
+from adjust_util.Nat_Constants import R
+
 
 class logArrheniusTerm(object):  # term of form a + b*ln(T) + c/T
     def __init__(self,a=0.0,b=0.0,c=0.0):

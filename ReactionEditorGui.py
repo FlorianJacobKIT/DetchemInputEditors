@@ -4,6 +4,7 @@ import tkinter.messagebox
 import tkinter.simpledialog
 
 import Interfaces
+import Reaction_Class
 from CenterGui import CenterWindow
 from Interfaces import Checkable, SelfFixing
 from adjust_util.TextModifiers import bcolors
@@ -21,14 +22,12 @@ class UniversalEditorGui(CenterWindow):
         self.entry_vars = {}
         self.reaction = to_edit
         self.focus_set()
-        self.generate_fields()
+        self.generate_fields(self.reaction, self, self.reaction.no_edit(),self.reaction.no_show())
 
-    def generate_fields(self):
-        dict_version = self.reaction.__dict__
-        self.grid_columnconfigure(1, weight=1)
+    def generate_fields(self, obj:Reaction_Class.Reaction, parent, no_edit: list[str], no_show: list[str], add_save_btn = True):
+        dict_version = obj.__dict__
+        parent.grid_columnconfigure(1, weight=1)
         i = 0
-        no_show = self.reaction.no_show()
-        no_edit = self.reaction.no_edit()
         for key, value in dict_version.items():
             if key in no_show:
                 continue
@@ -38,12 +37,12 @@ class UniversalEditorGui(CenterWindow):
             if not key.islower():
                 print(bcolors.WARNING + "Warning: Using non Lowercase \'" + key + "\'-variable may cause issues" + bcolors.ENDC)
             if type(value) == dict:
-                frame = tkinter.Frame(self, name=key.lower(), borderwidth=2, relief=tkinter.RIDGE)
+                frame = tkinter.Frame(parent, name=key.lower(), borderwidth=2, relief=tkinter.RIDGE)
                 frame.grid(column=0, row=i, columnspan=2, sticky="nsew", pady=2)
                 frame.grid_columnconfigure(1, weight=1)
                 sub_dict: dict
                 sub_dict = dict_version[key]
-                label = tkinter.Label(frame, text=key.lower(), font=("FixedSys", 12, "bold"), anchor=tkinter.W)
+                label = tkinter.Label(frame, text=key.lower(), font=("FixedSys", 12, "bold"), width=20, anchor=tkinter.W)
                 label.grid(column=0, row=0, columnspan=1, sticky="w")
                 add_btn = tkinter.Button(frame, text="+", command=lambda d=value: self.add(d), state=state)
                 add_btn.grid(column=1, row=0, sticky="ew")
@@ -66,12 +65,12 @@ class UniversalEditorGui(CenterWindow):
                     rem_btn.grid(column=2, row=j, sticky="nsew")
                     j -= - 1
             elif type(value) == list:
-                frame = tkinter.Frame(self, name=key.lower(), borderwidth=2, relief=tkinter.RIDGE)
+                frame = tkinter.Frame(parent, name=key.lower(), borderwidth=2, relief=tkinter.RIDGE)
                 frame.grid(column=0, row=i, columnspan=2, sticky="nsew", pady=2)
                 frame.grid_columnconfigure(1, weight=1)
                 sub_list: list
                 sub_list = dict_version[key]
-                label = tkinter.Label(frame, text=key, font=("FixedSys", 12, "bold"), anchor=tkinter.W)
+                label = tkinter.Label(frame, text=key, font=("FixedSys", 12, "bold"), width=20, anchor=tkinter.W)
                 label.grid(column=0, row=0, columnspan=1, sticky="w")
                 add_btn = tkinter.Button(frame, text="+", command=lambda d=value: self.add(d), state=state)
                 add_btn.grid(column=1, row=0, sticky="ew")
@@ -96,39 +95,41 @@ class UniversalEditorGui(CenterWindow):
                 text = key
                 if text.startswith("is_"):
                     text = text[3:]
-                label = tkinter.Label(self, text=text, font=("FixedSys", 12), width=20, anchor=tkinter.W)
+                label = tkinter.Label(parent, text=text, font=("FixedSys", 12), width=20, anchor=tkinter.W)
                 label.grid(column=0, row=i, sticky="w")
                 self.entry_vars[key] = tkinter.BooleanVar()
                 self.entry_vars[key].set(sub_bool)
-                entry = tkinter.Button(self, text="On" if self.entry_vars[key].get() else "Off", state=state)
+                entry = tkinter.Button(parent, text="On" if self.entry_vars[key].get() else "Off", state=state)
                 entry.config(command=lambda k=key,btn= entry: self.update_btn(k, btn))
                 entry.grid(column=1, row=i, sticky="nsew")
             elif type(value) == float:
                 sub_float = dict_version[key]
-                label = tkinter.Label(self, text=key + " (float)", font=("FixedSys", 12), width=20, anchor=tkinter.W)
+                if key == "A_k" and obj.is_stick:
+                    key = "S_0"
+                label = tkinter.Label(parent, text=key + " (float)", font=("FixedSys", 12), width=20, anchor=tkinter.W)
                 label.grid(column=0, row=i, sticky="w")
                 self.entry_vars[key] = tkinter.DoubleVar()
                 self.entry_vars[key].set(sub_float)
-                entry = tkinter.Entry(self, textvariable=self.entry_vars[key], state=state)
+                entry = tkinter.Entry(parent, textvariable=self.entry_vars[key], state=state)
                 entry.grid(column=1, row=i, sticky = "nsew")
             elif type(value) == int:
                 sub_int = dict_version[key]
-                label = tkinter.Label(self, text=key + " (int)", font=("FixedSys", 12), width=20, anchor=tkinter.W)
+                label = tkinter.Label(parent, text=key + " (int)", font=("FixedSys", 12), width=20, anchor=tkinter.W)
                 label.grid(column=0, row=i, sticky="w")
                 self.entry_vars[key] = tkinter.IntVar()
                 self.entry_vars[key].set(sub_int)
-                entry = tkinter.Entry(self, textvariable=self.entry_vars[key], state=state)
+                entry = tkinter.Entry(parent, textvariable=self.entry_vars[key], state=state)
                 entry.grid(column=1, row=i, sticky = "nsew")
             elif type(value) == str:
                 sub_str = dict_version[key]
-                label = tkinter.Label(self, text=key + " (str)", font=("FixedSys", 12), width=20, anchor=tkinter.W)
+                label = tkinter.Label(parent, text=key + " (str)", font=("FixedSys", 12), width=20, anchor=tkinter.W)
                 label.grid(column=0, row=i, sticky="w")
                 self.entry_vars[key] = tkinter.StringVar()
                 self.entry_vars[key].set(sub_str)
-                entry = tkinter.Entry(self, textvariable=self.entry_vars[key], state=state)
+                entry = tkinter.Entry(parent, textvariable=self.entry_vars[key], state=state)
                 entry.grid(column=1, row=i, sticky = "nsew")
             else:
-                frame = tkinter.Frame(self, name=key, borderwidth=2, relief=tkinter.RIDGE)
+                frame = tkinter.Frame(parent, name=key, borderwidth=2, relief=tkinter.RIDGE)
                 frame.grid(column=0, row=i, columnspan=2, sticky="nsew", pady=2)
                 frame.grid_columnconfigure(1, weight=1)
                 sub_dict: dict
@@ -156,10 +157,36 @@ class UniversalEditorGui(CenterWindow):
                     j -= - 1
 
             i -= - 1
-        save_btn = tkinter.Button(self, text="Save", command=self.save)
-        save_btn.grid(row=i, column=0, sticky='nsew')
-        close_btn = tkinter.Button(self, text="Cancel (Don't Save)", command=lambda: self.ask_destroy())
-        close_btn.grid(row=i, column=1, sticky='nsew')
+        if isinstance(obj, Reaction_Class.Reaction):
+            reaction: Reaction_Class.Reaction = obj
+            if reaction.is_reversible:
+                reverse = reaction.reverse_reaction
+                print(reverse.is_reversible)
+                frame = tkinter.Frame(self, height=20)
+                frame.grid(column=0, row=i, sticky="w")
+                i -= - 1
+
+                label = tkinter.Label(self, text="Reverse Reaction", font=("FixedSys", 14, "bold"), width=20, anchor=tkinter.W)
+                label.grid(column=0, row=i, sticky="w")
+                i -=- 1
+                frame = tkinter.Frame(self, name="reverse_reaction".lower(), borderwidth=5, relief=tkinter.RIDGE, bg="lightgray")
+                frame.grid(column=0, row=i, columnspan=2, sticky="nsew", pady=2)
+                frame.grid_columnconfigure(1, weight=1)
+                i -= - 1
+                no_show.append("products")
+                no_show.append("educts")
+                no_show.append("is_reversible")
+                no_show.append("category")
+                j = self.generate_fields(reverse, frame, no_edit, no_show, False)
+                i += j
+        if add_save_btn:
+            print("Save Btn")
+            save_btn = tkinter.Button(self, text="Save", command=self.save)
+            save_btn.grid(row=i, column=0, sticky='nsew')
+            close_btn = tkinter.Button(self, text="Cancel (Don't Save)", command=lambda: self.ask_destroy())
+            close_btn.grid(row=i, column=1, sticky='nsew')
+            i -=- 1
+        return i
 
     def ask_destroy(self):
         self.destroy()

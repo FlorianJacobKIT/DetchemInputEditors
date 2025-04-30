@@ -3,6 +3,7 @@ import os.path
 import periodictable
 
 import global_vars
+from adjust_util.AdjustData import AdjustDataHolder
 from adjust_util.MaterialData import Species, State, convert_state
 
 issuetracker = dict()
@@ -11,12 +12,19 @@ issuetracker["formation error"] = []
 issuetracker["chem. error"] = []
 
 lineCounter = 0
-def read_all_file(file_name: str):
+def read_all_file(file_name: str, ad_data:AdjustDataHolder):
     global lineCounter
     global_vars.thermalDataMap = dict()
     if not os.path.isfile(file_name):
         raise FileNotFoundError("Could not find file " + file_name)
     file = open(file_name, "r")
+
+    surfaces: dict[str, tuple[str, int]] = dict()
+    for key,surface in ad_data.surface_side_value.items():
+        surfaces[key] = (key , 1)
+        for special in surface.special_surface_species:
+            surfaces[special] = (key, surface.special_surface_species[special])
+
 
     lines = file.readlines()
     while 1 == 1:
@@ -90,19 +98,21 @@ def read_all_file(file_name: str):
                                     i + 1)].replace("D", "E"))
                         issuetracker["missing value"].append(lineCounter)
                         species.add_coefficient(None)
+
+        species.check_adsorpt(surfaces, ad_data)
         global_vars.thermalDataMap[name] = species
     file.close()
 
 
 
 
-def find_species(species:str):
+def find_species(species:str) -> Species:
     values: Species
     error = NameError("Species not found")
     values = global_vars.thermalDataMap.get(species, Species("", State.Unknown))
     if str(values) == "":
         if species in global_vars.defaultMapping:
-            return str(global_vars.defaultMapping[species])
+            return global_vars.thermalDataMap[str(global_vars.defaultMapping[species])]
         alternativ = [x for x in global_vars.thermalDataMap.keys() if x.upper().startswith(species.upper())]
         if len(alternativ) > 0:
             print("Did not find:", species,"\nDid you mean: ")
@@ -120,7 +130,7 @@ def find_species(species:str):
                 raise error
         else:
             raise error
-    return species
+    return  global_vars.thermalDataMap[species]
 
 
 

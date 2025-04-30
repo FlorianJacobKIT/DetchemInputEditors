@@ -1,0 +1,64 @@
+<SPECIES>
+  <GASPHASE>
+	CH4
+	O2
+	CO2
+	CO
+	H2O
+	H2
+  </GASPHASE>
+  <SURFACE name="(b)" sites = 3.554e-9 [mol/cm2]>
+    (b)
+    vac(b)
+    O(b)
+   H(b)
+   CO(b)
+   CH2(b)
+   CH3(b)
+   CHO(b)
+  <INITIAL>
+	  (b) *
+	</INITIAL>
+  </SURFACE>
+  <SURFACE name="(a)" sites = 3.554E-09 [mol/cm2]>
+   (a)
+   O(a)
+   O2(a)
+   OH(a)
+   H2O(a)
+   CO(a)
+   H2(a)
+   H(a)
+   CO2(a)
+   CH3(a)
+   CH2OH(a)
+   CH2O(a)
+   CHO(a)
+   CH2(a)
+   CH(a)
+   HCOO(a)
+   <INITIAL>
+	  (a) *
+	</INITIAL>
+  </SURFACE>
+</SPECIES>
+
+<MECHANISM>
+ <SURFACE>
+   file = "CH4_O2_PdO_2019_DETCHEM.txt"
+ </SURFACE>
+</MECHANISM>
+
+<ADJUST>
+  <Tref> 
+    300 700         # just two temperatures are sufficient
+             # enter more temperatures if certain ranges are more important than others
+  </Tref>
+  flag_weight = 1   # Note: use flag_weight=0 if marked reactions should not be changed
+                    # Warning: if dependent reactions are unselected, then ADJUST will fail ! 
+
+  <COV>
+#   species $dependency
+  </COV>
+
+</ADJUST>

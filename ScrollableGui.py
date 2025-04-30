@@ -1,13 +1,15 @@
 import math
+import os
 import tkinter
 import tkinter.messagebox
 from tkinter import *
 from tkinter.scrolledtext import ScrolledText
 
 import Config
-from CenterGui import CenterRootWindow
 import EditorGui
+import ReactionEditorGui
 import global_vars
+from CenterGui import CenterRootWindow
 from Reaction_Class import Reaction
 from adjustclass import AdjustClass
 
@@ -21,30 +23,44 @@ class ListGui(CenterRootWindow):
     save_content = "non"
     hidden_categorys :list[str] = list()
     search_var: tkinter.StringVar = None
-    A: AdjustClass
 
-
-
-    def __init__(self):
+    def __init__(self, adjust: AdjustClass):
         super().__init__()
-        self.A = AdjustClass()
 
-        self.grid_rowconfigure(1, weight=1)
-        self.grid_columnconfigure((1, 2), weight=1)
+        self.adjust_obj = adjust
+        self.grid_rowconfigure(2, weight=1)
+        self.grid_columnconfigure(3, weight=1)
 
         width = 30
         search_var = tkinter.StringVar()
         self.search_var = search_var
         search_var.set("Search")
         search_bar = tkinter.Entry(self, textvariable=search_var, fg="gray", width=width)
-        search_bar.grid(column=0, row=0, pady = (5,0), sticky="w")
+        search_bar.grid(column=0, row=0, pady = (5,0), padx = 5, sticky="w")
         search_var.trace("w", lambda name,index,mode: self.update_search())
 
-        help_label = tkinter.Label(self, text="\'*:\' Fuzzy Search" + " "*5  + "\'e:\' Search in Educts" + " "*5  + "\'p:\' Search in Products")
-        help_label.grid(column=1, row=0, sticky="ew")
+        help_label = tkinter.Label(self, text="\'*:\' Fuzzy Search" + "\n"  + "\'e:\' Search in Educts" + "\n"  + "\'p:\' Search in Products", anchor=tkinter.W, justify=tkinter.LEFT)
+        help_label.grid(column=0, row=1, columnspan=2, sticky="w")
 
-        new_btn = tkinter.Button(self,text="New Reaction",command=self.add_reaction)
-        new_btn.grid(column=2, row=0, sticky="ew")
+        def update_adjust(adjust_object: AdjustClass) -> None:
+            adjust_data = adjust_object.adjust_data
+            EditorGui.UniversalEditorGui(adjust_data).show()
+            adjust_object.adjust_data = adjust_data
+            adjust_config = os.path.join(global_vars.parent, "adjust.json")
+            target = open(adjust_config, "w")
+            target.write(adjust_data.toJSON(pretty=True))
+            target.close()
+
+
+        new_btn = tkinter.Button(self,text="Edit Adjust Data (use careful)",command=lambda :update_adjust(adjust), width=width)
+        new_btn.grid(column=1, row=0, pady = (5,0), padx = 5, sticky="ew")
+
+        # Secures the placement of all other elements
+        space_frame = tkinter.Frame(self)
+        space_frame.grid(column=3, row=0, sticky="ew")
+
+        new_btn = tkinter.Button(self,text="New Reaction",command=self.add_reaction, width=width, font=("Arial", 16))
+        new_btn.grid(column=4, row=0, pady = (5,0), padx = 5, rowspan = 2, sticky="nwse")
 
 
         def erase(event=None):
@@ -60,7 +76,7 @@ class ListGui(CenterRootWindow):
         search_bar.bind('<FocusOut>', add)
 
         self.container = Frame(self, relief=tkinter.RIDGE, borderwidth=3)
-        self.container.grid(row=1, column=0, columnspan = 3, sticky='nsew')
+        self.container.grid(row=2, column=0, columnspan = 5, sticky='nsew')
         self.container.grid_rowconfigure(0, weight=1)
         self.container.grid_columnconfigure(0, weight=1)
 
@@ -91,13 +107,22 @@ class ListGui(CenterRootWindow):
                 i -=- 1
 
         save_btn = tkinter.Button(self, text="Save as copy", command=lambda: self.save("copy"), width=width)
-        save_btn.grid(row=2, column=0, padx = 5, pady = 5, sticky='nsw')
+        save_btn.grid(row=3, column=0, padx = 5, pady = 5, sticky='nsw')
 
-        save_btn = tkinter.Button(self, text="Overwrite", command=lambda:self.save("overwrite"), width=width)
-        save_btn.grid(row=2, column=1, padx = 5, pady = 5, sticky='nsw')
+        overwrite_btn = tkinter.Button(self, text="Overwrite", command=lambda:self.save("overwrite"), width=width)
+        overwrite_btn.grid(row=3, column=1, padx = 5, pady = 5, sticky='nsw')
 
-        close_btn = tkinter.Button(self, text="Close (Don't Save)", command=lambda: self.ask_destroy())
-        close_btn.grid(row=2, column=2, padx = 5, pady = 5, sticky='nse')
+        def run_adjust():
+            self.adjust_obj.adjust()
+            for reaction_category in global_vars.reactions:
+                for j in range(len(global_vars.reactions[reaction_category])):
+                    self.update_reaction_frame(global_vars.reactions[reaction_category][j])
+
+        adjust_btn = tkinter.Button(self, text="Adjust", command=lambda: run_adjust(), width=width)
+        adjust_btn.grid(row=3, column=2, padx = 5, pady = 5, sticky='nsw')
+
+        close_btn = tkinter.Button(self, text="Close (Don't Save)", command=lambda: self.ask_destroy(), width=width)
+        close_btn.grid(row=3, column=4, padx = 5, pady = 5, sticky='nse')
 
     def scroll(self, event):
         current_view = self.listbox.yview()
@@ -196,7 +221,7 @@ class ListGui(CenterRootWindow):
 
     def add_reaction(self):
         firstKey = list(global_vars.reactions.keys())[0]
-        reaction = Reaction(category=firstKey)
+        reaction = Reaction(category=firstKey, is_reversible=True)
         global_vars.reactions[firstKey].append(reaction)
 
         j = global_vars.reactions[firstKey].index(reaction)
@@ -214,6 +239,9 @@ class ListGui(CenterRootWindow):
     def add_reaction_to_frame(self, reaction, frame, text_size):
         widgets = dict()
         i = 0
+        label = tkinter.Label(frame, text=reaction.name, anchor=tkinter.E, width=4)
+        label.grid(row=0, column=i, sticky=tkinter.NSEW)
+        i -= - 1
         adjustable = tkinter.IntVar()
         adjustable.set(reaction.is_adjustable)
         self.no_garbage_collector.append(adjustable)
@@ -249,28 +277,33 @@ class ListGui(CenterRootWindow):
         label = tkinter.Frame(frame, width=10)
         label.grid(row=0, column=i, sticky=tkinter.NSEW)
         i -= - 1
-        label = tkinter.Label(frame, text="{:10.3E}".format(reaction.A_k), width=10,anchor=tkinter.E, font=("Arial", text_size), borderwidth=1, cursor = "bottom_left_corner",activebackground="gray")
+        title = ""
+        if reaction.is_stick:
+            title = "S=" + "{:10.3E}".format(reaction.sticking_coefficient)
+        else:
+            title = "A=" + "{:10.3E}".format(reaction.A_k)
+        label = tkinter.Label(frame, text=title, width=12,anchor=tkinter.E, font=("Arial", text_size), borderwidth=1, cursor = "bottom_left_corner",activebackground="gray")
         label.grid(row=0, column=i, sticky=tkinter.NSEW)
         widgets["A_k_label"] = label
         i -= - 1
         value = 0
         if reaction.old_A_k != 0:
             value = math.log10(reaction.A_k/reaction.old_A_k)
-        if reaction.is_sticky:
+        if reaction.is_stick:
             value = math.log(reaction.A_k/reaction.old_A_k) / math.log(2.)
         status = StatusBarWidget(frame, text_size*1.5,value)
         status.grid(row=0, column=i, sticky=tkinter.NS)
         widgets["A_k_status"] = status
         i -= - 1
-        label = tkinter.Label(frame, text="{:g}".format(reaction.beta_k), width=10,anchor=tkinter.E, font=("Arial", text_size), cursor = "bottom_left_corner",activebackground="gray")
+        label = tkinter.Label(frame, text="{:g}".format(reaction._beta_k), width=10, anchor=tkinter.E, font=("Arial", text_size), cursor ="bottom_left_corner", activebackground="gray")
         label.grid(row=0, column=i, sticky=tkinter.NSEW)
         widgets["beta_k_label"] = label
         i -= - 1
-        status = StatusBarWidget(frame, text_size*1.5,reaction.beta_k-reaction.old_beta_k)
+        status = StatusBarWidget(frame, text_size * 1.5, reaction._beta_k - reaction.old_beta_k)
         status.grid(row=0, column=i, sticky=tkinter.NS)
         widgets["beta_k_status"] = status
         i -= - 1
-        label = tkinter.Label(frame, text="{:g}".format(reaction.E_k), width=10,anchor=tkinter.E, font=("Arial", text_size), cursor = "bottom_left_corner",activebackground="gray")
+        label = tkinter.Label(frame, text="{:g}".format(reaction.E_k*1e-3), width=10,anchor=tkinter.E, font=("Arial", text_size), cursor = "bottom_left_corner",activebackground="gray")
         label.grid(row=0, column=i, sticky=tkinter.NSEW)
         widgets["E_k_label"] = label
         i -= - 1
@@ -290,18 +323,20 @@ class ListGui(CenterRootWindow):
         label.grid(row=0, column=i, sticky=tkinter.NSEW)
 
     def edit_reaction(self, reaction):
-        EditorGui.UniversalEditorGui(reaction).show()
-        reaction_frame_name = self.reverse_mapper.pop(reaction)
+        ReactionEditorGui.UniversalEditorGui(reaction).show()
+        self.update_reaction_frame(reaction)
+        self.update_search()
+
+    def update_reaction_frame(self, reverse):
+        reaction_frame_name = self.reverse_mapper.pop(reverse)
         frame = self.container.nametowidget(reaction_frame_name)
         (reaction_category, j, widgets) = self.reaction_mapper.pop(reaction_frame_name)
         for child in frame.winfo_children():
             child.destroy()
-        widgets = self.add_reaction_to_frame(reaction, frame,
+        widgets = self.add_reaction_to_frame(reverse, frame,
                                              Config.text_size)
         self.reaction_mapper[str(frame)] = (reaction_category, j, widgets)
-        self.reverse_mapper[reaction] = str(frame)
-        self.update_search()
-
+        self.reverse_mapper[reverse] = str(frame)
 
 
 class StatusBarWidget(tkinter.Frame):
