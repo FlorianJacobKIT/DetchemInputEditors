@@ -110,7 +110,6 @@ class AdjustClass(object):
         # all given functions are fitted by a logArrheniusTerm
 
         LES = algebra.LinearEquationSystem()
-        print(self.T_ref)
         reversible_eqs: list[Reaction_Class.Reaction] = list()
         reverses = list()
         non_reversible_eqs = list()
@@ -126,7 +125,6 @@ class AdjustClass(object):
             rreac = freac.reverse_reaction
             lterm = algebra.LinearCombination()
             lterm += freac.get_logkf() - rreac.get_logkf()
-
             if freac.is_adjustable:
                 lterm += algebra.EquationVariable(freac)
                 lterm -= algebra.EquationVariable(rreac)
@@ -155,8 +153,6 @@ class AdjustClass(object):
         print("Finish elimination")
         ##        print ">>2"
         ##        print LES
-
-        print(str(LES))
 
         # minimize Phi=sum(w_i * ||x_i||^2) with x_i fulfilling equations in LES
         # x_i = a_i + b_i * ln(T) + c_i / T
@@ -228,7 +224,7 @@ class AdjustClass(object):
             logkf = X + reac.get_logkf()
             A, beta, Ea = log2Arrhenius(logkf)
             nreac.E_k = Ea
-            nreac._beta_k = beta
+            nreac.beta_k = beta
             if nreac.is_stick:
                 term = nreac.temperature_independent_term
                 if A/term>1 or A<0:

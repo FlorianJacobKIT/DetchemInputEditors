@@ -1,1 +1,1 @@
-text_size = 10
+text_size = 14

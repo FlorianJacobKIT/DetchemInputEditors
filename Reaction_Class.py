@@ -44,6 +44,7 @@ class Reaction(Checkable, SelfFixing, EditorAdjusted):
         elements.append("old_beta_k")
         elements.append("old_E_k")
         elements.append("_reverse_reaction")
+        elements.append("reaction_id")
         return elements
 
     def no_edit(self) -> list[str]:
@@ -97,7 +98,6 @@ class Reaction(Checkable, SelfFixing, EditorAdjusted):
 
             self.temperature_independent_term = \
                 math.sqrt(R / 2 / math.pi / weight) / cfactor
-            print(self.reaction_id, self.temperature_independent_term)
         self.update_old_values()
 
     @property
@@ -164,6 +164,9 @@ class Reaction(Checkable, SelfFixing, EditorAdjusted):
         if total_spec > 5:
             tkinter.messagebox.showinfo(title="Reaction Error", message="Reduce number of educts and products to 5")
             return False
+        if self.is_stick and (self._A_k>1 or self._A_k<0):
+            tkinter.messagebox.showinfo(title="Reaction Error", message="Stick Factor needs to be between 0 and 1")
+            return False
         return True
 
     def fix(self) -> None:
@@ -171,8 +174,10 @@ class Reaction(Checkable, SelfFixing, EditorAdjusted):
         self.products = {k: v for k, v in self.products.items() if v>0}
         self.epsilon = {k: v for k, v in self.epsilon.items() if v!=0}
         self.orders = {k: v for k, v in self.orders.items() if v!=0}
-        self.reverse_reaction.educts = self.products
-        self.reverse_reaction.products = self.educts
+        if self.is_reversible:
+            self.reverse_reaction.educts = self.products
+            self.reverse_reaction.products = self.educts
+            self.reverse_reaction.category = self.category
 
     @property
     def A_k(self):
