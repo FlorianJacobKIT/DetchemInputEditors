@@ -21,9 +21,18 @@ def add_reaction_to_line(reaction, lines):
             line += "+"
     line = line[:-1]
     line = line.ljust(45)
-    line += "{:10.3E}".format(reaction.A_k)
-    line += "{:7G}".format(reaction._beta_k)
-    line += "{:10G}".format(reaction.E_k)
+
+    A_k = reaction.get_A_k(raw=True)
+    if not reaction.is_stick:
+        # Mol/cm2 -> Mol/m2 and Mol/cm3 -> Mol/m3
+        A_k = A_k * 100**reaction.exponent
+    beta_k = reaction.get_beta_k(raw=True)
+    # kJ/mol -> J/mol
+    E_k = reaction.E_k / 1e3
+
+    line += "{:10.3E}".format(A_k).rjust(10)
+    line += "{:.4f}".format(beta_k).rjust(7)
+    line += "{:10G}".format(E_k).rjust(10)
     line += "\n"
     lines.append(line)
     orders = reaction.orders

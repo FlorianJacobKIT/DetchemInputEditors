@@ -45,6 +45,7 @@ class Reaction(Checkable, SelfFixing, EditorAdjusted):
         elements.append("old_E_k")
         elements.append("_reverse_reaction")
         elements.append("reaction_id")
+        elements.append("exponent")
         return elements
 
     def no_edit(self) -> list[str]:

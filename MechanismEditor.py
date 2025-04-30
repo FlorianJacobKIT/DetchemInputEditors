@@ -140,13 +140,13 @@ while i < len(lines):
             sign = -1
             reversible = True
         j -=- 1
-    A_k = float(text[46:56])
+    A_k = float(text[46:55])
     if not is_stick:
         # Mol/cm2 -> Mol/m2 and Mol/cm3 -> Mol/m3
         A_k = A_k / 100**exponent
-    beta_k = float(text[56:63])
+    beta_k = float(text[56:62])
     # kJ/mol -> J/mol
-    E_k = float(text[63:73]) * 1e3
+    E_k = float(text[63:72]) * 1e3
     reaction = Reaction_Class.Reaction(category, input_spec, output_spec, A_k, beta_k, E_k,is_stick,reversible, disabled==1)
     reaction.exponent = exponent
     reactions[category].append(reaction)
