@@ -1,3 +1,4 @@
+import copy
 import math
 import os
 from tkinter import filedialog
@@ -185,8 +186,6 @@ for category in reactions:
     for reaction in reactions[category]:
         if reaction.reverse_reaction is not None:
             reaction.reverse_reaction.is_reversible = False
-
-
 
 gui = ScrollableGui.ListGui(A)
 gui.focus_set()

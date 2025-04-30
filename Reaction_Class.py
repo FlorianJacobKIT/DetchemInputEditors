@@ -261,4 +261,23 @@ class Reaction(Checkable, SelfFixing, EditorAdjusted):
     def deltaG_RT_adjustable(self):
         return self.sum_F(lambda s : s.G_adjustable())
 
+    def kf(self,T):
+        if self.is_stick:
+            k = self._A_k * self.temperature_independent_term * math.sqrt(T)
+            k *= T ** self._beta_k
+            k *= math.exp(-self._E_k / R / T)
+            return k
+        Tfactor=T**self._beta_k
+        return self._A_k * Tfactor * math.exp(-self._E_k/R/T)
+
+    def kf_old(self,T):
+        if self.is_stick:
+            k = self.old_A_k * self.temperature_independent_term * math.sqrt(T)
+            k *= T ** self.old_beta_k
+            k *= math.exp(-self.old_E_k / R / T)
+            return k
+        Tfactor=T**self.old_beta_k
+        return self.old_A_k * Tfactor * math.exp(-self.old_E_k/R/T)
+
+
 

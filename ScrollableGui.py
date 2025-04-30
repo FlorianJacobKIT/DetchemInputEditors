@@ -317,6 +317,7 @@ class ListGui(CenterRootWindow):
         else:
             title = "A=" + "{:10.3E}".format(reaction.get_A_k(True))
         label = tkinter.Label(frame, text=title, width=12,anchor=tkinter.E, font=("Arial", text_size), borderwidth=1, cursor = "bottom_left_corner",activebackground="gray")
+        label.bind("<Button-1>", lambda event, reac=reaction: self.show_graph(reac))
         label.grid(row=0, column=i, sticky=tkinter.NSEW)
         widgets["A_k_label"] = label
         i -= - 1
@@ -330,6 +331,7 @@ class ListGui(CenterRootWindow):
         widgets["A_k_status"] = status
         i -= - 1
         label = tkinter.Label(frame, text="{:g}".format(reaction.get_beta_k(True)), width=10, anchor=tkinter.E, font=("Arial", text_size), cursor ="bottom_left_corner", activebackground="gray")
+        label.bind("<Button-1>", lambda event, reac=reaction: self.show_graph(reac))
         label.grid(row=0, column=i, sticky=tkinter.NSEW)
         widgets["beta_k_label"] = label
         i -= - 1
@@ -338,6 +340,7 @@ class ListGui(CenterRootWindow):
         widgets["beta_k_status"] = status
         i -= - 1
         label = tkinter.Label(frame, text="{:g}".format(reaction.E_k*1e-3), width=10,anchor=tkinter.E, font=("Arial", text_size), cursor = "bottom_left_corner",activebackground="gray")
+        label.bind("<Button-1>", lambda event, reac=reaction: self.show_graph(reac))
         label.grid(row=0, column=i, sticky=tkinter.NSEW)
         widgets["E_k_label"] = label
         i -= - 1
@@ -374,6 +377,7 @@ class ListGui(CenterRootWindow):
                 title = "A=" + title
             label = tkinter.Label(frame, text=title, width=12, anchor=tkinter.E, font=("Arial", text_size),
                                   borderwidth=1, cursor="bottom_left_corner", activebackground="gray")
+            label.bind("<Button-1>", lambda event, reac=reverse: self.show_graph(reac))
             label.grid(row=0, column=i, sticky=tkinter.NSEW)
             widgets["A_k_label"] = label
             i -= - 1
@@ -388,6 +392,7 @@ class ListGui(CenterRootWindow):
             i -= - 1
             label = tkinter.Label(frame, text="{:g}".format(reverse.get_beta_k(True)), width=10, anchor=tkinter.E,
                                   font=("Arial", text_size), cursor="bottom_left_corner", activebackground="gray")
+            label.bind("<Button-1>", lambda event, reac = reverse: self.show_graph(reac))
             label.grid(row=0, column=i, sticky=tkinter.NSEW)
             widgets["beta_k_label"] = label
             i -= - 1
@@ -397,6 +402,7 @@ class ListGui(CenterRootWindow):
             i -= - 1
             label = tkinter.Label(frame, text="{:g}".format(reverse.E_k * 1e-3), width=10, anchor=tkinter.E,
                                   font=("Arial", text_size), cursor="bottom_left_corner", activebackground="gray")
+            label.bind("<Button-1>", lambda event, reac=reverse: self.show_graph(reac))
             label.grid(row=0, column=i, sticky=tkinter.NSEW)
             widgets["E_k_label"] = label
             i -= - 1
@@ -440,6 +446,71 @@ class ListGui(CenterRootWindow):
         self.reaction_mapper[str(frame)] = (reaction_category, j, widgets)
         self.reverse_mapper[reverse] = str(frame)
 
+    def show_graph(self, reac: Reaction):
+        top = Toplevel(bg="white")
+        top.title(reac.name)
+        canvas = Canvas(top, width=450, height=450, bg="white")
+        canvas.grid(row=0, column=0, sticky=N + S + E + W)
+
+        # canvas coordinate system
+        X1, X2 = 40, 455
+        Y1, Y2 = 430, 5
+
+        # data
+        Tref = self.adjust_obj.T_ref
+        kf0 = [reac.kf(T) for T in Tref]
+        kf1 = [reac.kf_old(T) for T in Tref]
+        try:
+            rreac = reac.reverse_reaction
+            kf2 = [self.adjust_obj.old2new[rreac].kr(T) for T in Tref]
+        except:
+            kf2 = kf1
+
+        x1 = 1. / max(Tref)
+        x2 = 1. / min(Tref)
+        y2 = math.log(max(kf0 + kf1 + kf2), 10)
+        y1 = math.log(min(kf0 + kf1 + kf2), 10)
+
+        # conversion functions
+        XX = lambda x: int(X1 + (x - x1) / (x2 - x1) * (X2 - X1) + 0.5)
+        YY = lambda y: int(Y1 + (y - y1) / (y2 - y1) * (Y2 - Y1) + 0.5)
+
+        # create coordinate system
+        T1 = int(min(Tref) / 100) * 100
+        T2 = int(max(Tref) / 100 + 1) * 100
+        lastX = X2 + 80
+        for T in range(T1, T2, 100):
+            X = XX(1. / T)
+            canvas.create_line(X, Y1, X, Y2, dash=(1,))
+            if abs(lastX - X) > 80:
+                canvas.create_text(X, Y1 + 2, text="%i" % T, anchor=N)
+                lastX = X
+        lastY = Y1 + 40
+        for y in range(int(y1), int(y2) + 1):
+            mantissa = [1]
+            if y2 - y1 < 3: mantissa = list(range(1, 10))
+            for i in mantissa:
+                Y = YY(y + math.log(i, 10))
+                canvas.create_line(X1, Y, X2, Y, dash=(1,))
+                if abs(lastY - Y) > 40:
+                    canvas.create_text(X1 - 2, Y, text="%iE%i" % (i, y), anchor=E)
+                    lastY = Y
+
+        # create lines
+        for kf, color in ((kf0, "blue"), (kf2, "green"), (kf1, "red")):
+            coords = []
+            for T, k in zip(Tref, kf):
+                coords.append(XX(1. / T))
+                coords.append(YY(math.log(k, 10)))
+            canvas.create_line(fill=color, width=3, *coords)
+
+        # create legend
+        canvas.create_text(X2 - 20, Y2 + 20, fill="blue", text="before ADJUST", anchor=NE)
+        canvas.create_text(X2 - 20, Y2 + 35, fill="red", text="after ADJUST", anchor=NE)
+        canvas.create_text(X2 - 20, Y2 + 50, fill="green", text="therm. target", anchor=NE)
+
+        top.mainloop()
+        top.quit()
 
 class StatusBarWidget(tkinter.Frame):
     def __init__(self, master, width, size=0.):
@@ -467,4 +538,7 @@ class StatusBarWidget(tkinter.Frame):
         r = min((255, int(500 * size)))
         g = max((0, min((255, int(400 * (1 - size))))))
         return "#%2.2x%2.2x%2.2x" % (r, g, 0)
+
+
+
 
