@@ -277,11 +277,11 @@ class ListGui(CenterRootWindow):
         label = tkinter.Frame(frame, width=10)
         label.grid(row=0, column=i, sticky=tkinter.NSEW)
         i -= - 1
-        title = ""
+        title = "{:10.3E}".format(reaction.get_A_k(True))
         if reaction.is_stick:
-            title = "S=" + "{:10.3E}".format(reaction.sticking_coefficient)
+            title = "S=" + title
         else:
-            title = "A=" + "{:10.3E}".format(reaction.A_k)
+            title = "A=" + title
         label = tkinter.Label(frame, text=title, width=12,anchor=tkinter.E, font=("Arial", text_size), borderwidth=1, cursor = "bottom_left_corner",activebackground="gray")
         label.grid(row=0, column=i, sticky=tkinter.NSEW)
         widgets["A_k_label"] = label
@@ -295,7 +295,7 @@ class ListGui(CenterRootWindow):
         status.grid(row=0, column=i, sticky=tkinter.NS)
         widgets["A_k_status"] = status
         i -= - 1
-        label = tkinter.Label(frame, text="{:g}".format(reaction._beta_k), width=10, anchor=tkinter.E, font=("Arial", text_size), cursor ="bottom_left_corner", activebackground="gray")
+        label = tkinter.Label(frame, text="{:g}".format(reaction.get_beta_k(True)), width=10, anchor=tkinter.E, font=("Arial", text_size), cursor ="bottom_left_corner", activebackground="gray")
         label.grid(row=0, column=i, sticky=tkinter.NSEW)
         widgets["beta_k_label"] = label
         i -= - 1

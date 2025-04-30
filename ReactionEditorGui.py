@@ -34,8 +34,6 @@ class UniversalEditorGui(CenterWindow):
             state = tkinter.NORMAL
             if key in no_edit:
                 state = tkinter.DISABLED
-            if not key.islower():
-                print(bcolors.WARNING + "Warning: Using non Lowercase \'" + key + "\'-variable may cause issues" + bcolors.ENDC)
             if type(value) == dict:
                 frame = tkinter.Frame(parent, name=key.lower(), borderwidth=2, relief=tkinter.RIDGE)
                 frame.grid(column=0, row=i, columnspan=2, sticky="nsew", pady=2)
@@ -104,12 +102,15 @@ class UniversalEditorGui(CenterWindow):
                 entry.grid(column=1, row=i, sticky="nsew")
             elif type(value) == float:
                 sub_float = dict_version[key]
-                if key == "A_k" and obj.is_stick:
-                    key = "S_0"
+                if key == "_A_k":
+                    if obj.is_stick:
+                        key = "S_0"
+                    else:
+                        key = "A_k"
                 label = tkinter.Label(parent, text=key + " (float)", font=("FixedSys", 12), width=20, anchor=tkinter.W)
                 label.grid(column=0, row=i, sticky="w")
                 self.entry_vars[key] = tkinter.DoubleVar()
-                self.entry_vars[key].set(sub_float)
+                self.entry_vars[key].set("{:g}".format(sub_float))
                 entry = tkinter.Entry(parent, textvariable=self.entry_vars[key], state=state)
                 entry.grid(column=1, row=i, sticky = "nsew")
             elif type(value) == int:

@@ -1,5 +1,7 @@
 import copy
 
+import numpy as np
+
 import Reaction_Class
 import adjust_util.algebra
 import global_vars
@@ -33,7 +35,7 @@ class AdjustClass(object):
         self.T_min = 20000
         self.T_max = 0
         for temp in temps:
-            self.T_ref.extend(list(range(temp.T_min, temp.T_max, temp.T_step)))
+            self.T_ref.extend(list(range(temp.T_min, temp.T_max + 1, temp.T_step)))
             self.T_min = min(self.T_min, temp.T_min)
             self.T_max = max(self.T_max, temp.T_max)
 
@@ -108,6 +110,7 @@ class AdjustClass(object):
         # all given functions are fitted by a logArrheniusTerm
 
         LES = algebra.LinearEquationSystem()
+        print(self.T_ref)
         reversible_eqs: list[Reaction_Class.Reaction] = list()
         reverses = list()
         non_reversible_eqs = list()
@@ -123,6 +126,7 @@ class AdjustClass(object):
             rreac = freac.reverse_reaction
             lterm = algebra.LinearCombination()
             lterm += freac.get_logkf() - rreac.get_logkf()
+
             if freac.is_adjustable:
                 lterm += algebra.EquationVariable(freac)
                 lterm -= algebra.EquationVariable(rreac)
@@ -131,13 +135,14 @@ class AdjustClass(object):
             for T in self.T_ref:
                 rconst[T] = (math.log(freac.Kp2Kc(T))
                              - freac.deltaG_const(T) / R / T)
+
             rterm += logArrheniusFit(rconst)
             rterm -= freac.deltaG_RT_adjustable()
             LES.add(lterm, rterm)
 
         ##        print ">>1"
         ##        print LES
-        print(str(LES))
+
 
         # eliminate thermodynamic unknowns (y_i)
         LES2 = algebra.LinearEquationSystem()
@@ -151,6 +156,7 @@ class AdjustClass(object):
         ##        print ">>2"
         ##        print LES
 
+        print(str(LES))
 
         # minimize Phi=sum(w_i * ||x_i||^2) with x_i fulfilling equations in LES
         # x_i = a_i + b_i * ln(T) + c_i / T

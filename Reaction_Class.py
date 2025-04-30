@@ -23,7 +23,7 @@ class Reaction(Checkable, SelfFixing, EditorAdjusted):
     epsilon: dict[str,float]
     _A_k = 0
     _beta_k = 0
-    E_k = 0
+    _E_k = 0
     old_A_k = 0
     old_beta_k = 0
     old_E_k = 0
@@ -63,7 +63,7 @@ class Reaction(Checkable, SelfFixing, EditorAdjusted):
         self.products = products
         self._A_k = A_k
         self._beta_k = beta_k
-        self.E_k = E_k
+        self._E_k = E_k
         self.is_stick = is_stick
         self.is_reversible = is_reversible
         self.is_disabled = is_disabled
@@ -180,6 +180,12 @@ class Reaction(Checkable, SelfFixing, EditorAdjusted):
             return self._A_k * self.temperature_independent_term
         return self._A_k
 
+    def get_A_k(self, raw= False):
+        if raw: return self._A_k
+        if self.is_stick:
+            return self._A_k * self.temperature_independent_term
+        return self._A_k
+
     @A_k.setter
     def A_k(self, value):
         if self.is_stick:
@@ -188,11 +194,13 @@ class Reaction(Checkable, SelfFixing, EditorAdjusted):
             self._A_k = value
 
     @property
-    def sticking_coefficient(self):
-        return self._A_k
-
-    @property
     def beta_k(self):
+        if self.is_stick:
+            return self._beta_k + 0.5
+        return self._beta_k
+
+    def get_beta_k(self, raw= False):
+        if raw: return self._beta_k
         if self.is_stick:
             return self._beta_k + 0.5
         return self._beta_k
@@ -204,10 +212,19 @@ class Reaction(Checkable, SelfFixing, EditorAdjusted):
         else:
             self._beta_k = value
 
-    def get_E_k(self):
+    @property
+    def E_k(self, raw= False):
+        if raw: return self._E_k
         if self.is_stick:
-            return self.E_k
-        return self.E_k
+            return self._E_k
+        return self._E_k
+
+    @E_k.setter
+    def E_k(self, value):
+        if self.is_stick:
+            self._E_k = value
+        else:
+            self._E_k = value
 
     def get_logkf(self):
         return logArrheniusTerm(math.log(self.A_k), self.beta_k, -self.E_k / R)
