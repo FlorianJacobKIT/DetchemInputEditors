@@ -24,6 +24,7 @@ dir_name = filedialog.askopenfilename()
 
 if dir_name == "":
     exit(0)
+global_vars.dir_name = dir_name
 
 global_vars.parent = os.path.dirname(dir_name)
 
@@ -77,6 +78,7 @@ if category == "":
 else:
     chem_start -= 1
 
+global_vars.file_prefix = lines[:chem_start]
 
 reactions = global_vars.reactions
 species = global_vars.species
@@ -196,27 +198,3 @@ gui.attributes('-topmost', False)
 gui.center()
 gui.show()
 
-
-
-
-
-if gui.save_content == "copy" or gui.save_content == "overwrite":
-    lines = lines[:chem_start]
-    for category in reactions:
-        lines.append("**** " + category + "\n")
-        for reaction in reactions[category]:
-            add_reaction_to_line(reaction, lines)
-            if reaction.is_reversible:
-                reaction = reaction.reverse_reaction
-                add_reaction_to_line(reaction,lines)
-
-    lines.append("END\n")
-    lines.append("-"*72)
-
-    filename = dir_name
-    if gui.save_content == "copy":
-        split = dir_name.split(".")
-        filename = split[0] + "_edit." + split[1]
-    file = open(filename, 'w')
-    file.writelines(lines)
-    file.close()

@@ -374,6 +374,9 @@ class AdjustClass(object):
 
     def adjust(self):
         self.old2new = copy.deepcopy(global_vars.reactions)
+        for category in global_vars.reactions:
+            for reaction in global_vars.reactions[category]:
+                reaction.update_old_values()
         OK = False
         for count in range(5):
             print("Try: ",count)
