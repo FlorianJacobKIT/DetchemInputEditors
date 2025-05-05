@@ -8,16 +8,20 @@ from tkinter.scrolledtext import ScrolledText
 import Config
 import EditorGui
 import ReactionEditorGui
+import Reaction_Class
 import global_vars
 from CenterGui import CenterRootWindow
 from Reaction_Class import Reaction
-from adjustclass import AdjustClass
+from Widgets import StatusBarWidget
+from adjust_util import algebra
+from adjust_util.linear import find_dependents
+from adjustclass import AdjustClass, update_adjustables
 
 
 class ListGui(CenterRootWindow):
 
     listbox: ScrolledText = None
-    reaction_mapper : dict[str,tuple[str,int, dict[str,Widget]]] = {}
+    reaction_mapper : dict[str,tuple[str,int, dict[str,StatusBarWidget|Label]]] = {}
     reverse_mapper: dict[Reaction|str, str] = {}
     placeholder = 'Search'
     save_content = "non"
@@ -59,7 +63,7 @@ class ListGui(CenterRootWindow):
         space_frame = tkinter.Frame(self)
         space_frame.grid(column=3, row=0, sticky="ew")
 
-        new_btn = tkinter.Button(self,text="New Reaction",command=self.add_reaction, width=width, font=("Arial", 16))
+        new_btn = tkinter.Button(self,text="New Reaction (WIP)",command=self.add_reaction, width=width, font=("Arial", 16), state=tkinter.DISABLED)
         new_btn.grid(column=4, row=0, pady = (5,0), padx = 5, rowspan = 2, sticky="nwse")
 
 
@@ -100,7 +104,7 @@ class ListGui(CenterRootWindow):
             i -=- 1
             for j in range(len(global_vars.reactions[reaction_category])):
                 reaction_frame = tkinter.Frame(self.container, name="frame:" + reaction_category+ ":" + str(j))
-                widgets = self.add_reaction_to_frame(global_vars.reactions[reaction_category][j], reaction_frame, Config.text_size)
+                widgets = self.add_reaction_to_frame(global_vars.reactions[reaction_category][j], reaction_frame)
                 self.reaction_mapper[str(reaction_frame)] = (reaction_category, j, widgets)
                 self.reverse_mapper[global_vars.reactions[reaction_category][j]] = str(reaction_frame)
                 reaction_frame.grid(row=i, column=0, sticky='nsew')
@@ -116,7 +120,7 @@ class ListGui(CenterRootWindow):
             self.adjust_obj.adjust()
             for reaction_category in global_vars.reactions:
                 for j in range(len(global_vars.reactions[reaction_category])):
-                    self.update_reaction_frame(global_vars.reactions[reaction_category][j])
+                    self.update_reaction_values(global_vars.reactions[reaction_category][j])
 
         adjust_btn = tkinter.Button(self, text="Adjust", command=lambda: run_adjust(), width=width)
         adjust_btn.grid(row=3, column=2, padx = 5, pady = 5, sticky='nsw')
@@ -237,6 +241,7 @@ class ListGui(CenterRootWindow):
         self.reverse_mapper.clear()
         self.reverse_mapper.clear()
 
+        i = 0
         for reaction_category in global_vars.reactions:
             header_label = tkinter.Label(self.container, name="header:" + reaction_category, text=str(reaction_category).ljust(160,"-"), fg="gray", font=("Arial", (Config.text_size * 5)//4, "bold"),anchor=tkinter.W)
             self.reaction_mapper[str(header_label)] = (reaction_category, -1, dict())
@@ -245,7 +250,7 @@ class ListGui(CenterRootWindow):
             i -=- 1
             for j in range(len(global_vars.reactions[reaction_category])):
                 reaction_frame = tkinter.Frame(self.container, name="frame:" + reaction_category+ ":" + str(j))
-                widgets = self.add_reaction_to_frame(global_vars.reactions[reaction_category][j], reaction_frame, Config.text_size)
+                widgets = self.add_reaction_to_frame(global_vars.reactions[reaction_category][j], reaction_frame)
                 self.reaction_mapper[str(reaction_frame)] = (reaction_category, j, widgets)
                 self.reverse_mapper[global_vars.reactions[reaction_category][j]] = str(reaction_frame)
                 reaction_frame.grid(row=i, column=0, sticky='nsew')
@@ -263,7 +268,7 @@ class ListGui(CenterRootWindow):
 
         j = global_vars.reactions[firstKey].index(reaction)
         reaction_frame = tkinter.Frame(self.container, name="frame:" + firstKey + ":" + str(j))
-        widgets = self.add_reaction_to_frame(reaction, reaction_frame, 16)
+        widgets = self.add_reaction_to_frame(reaction, reaction_frame)
         self.reaction_mapper[str(reaction_frame)] = (firstKey, j, widgets)
         self.reverse_mapper[reaction] = str(reaction_frame)
 
@@ -273,7 +278,8 @@ class ListGui(CenterRootWindow):
 
     no_garbage_collector = list()
 
-    def add_reaction_to_frame(self, reaction, frame, text_size):
+    def add_reaction_to_frame(self, reaction, frame):
+        text_size = Config.text_size
         widgets = dict()
         i = 0
         label = tkinter.Label(frame, text=reaction.name, anchor=tkinter.E, width=4)
@@ -282,13 +288,18 @@ class ListGui(CenterRootWindow):
         adjustable = tkinter.IntVar()
         adjustable.set(reaction.is_adjustable)
         self.no_garbage_collector.append(adjustable)
-        box = tkinter.Checkbutton(frame, variable=adjustable,disabledforeground="green", state=tkinter.DISABLED)
+        state = tkinter.NORMAL
+        if reaction.is_required:
+            state = tkinter.DISABLED
+        box = tkinter.Checkbutton(frame, variable=adjustable,disabledforeground="green", state=state)
+        def toggle_btn(reac: Reaction):
+            reac.is_adjustable = not reac.is_adjustable
+            update_adjustables(self)
+            self.update_reaction_frame(reaction)
+        adjustable.trace_add('write', lambda a,b,c, reac = reaction: toggle_btn(reac))
         box.grid(row = 0, column = i, sticky=tkinter.NSEW)
         i -=- 1
-        weight = tkinter.DoubleVar()
-        weight.set(reaction.weight)
-        self.no_garbage_collector.append(weight)
-        weight_entry = tkinter.Entry(frame, font=('Arial', text_size), width=5, textvariable=weight, state=tkinter.DISABLED)
+        weight_entry = tkinter.Label(frame, font=('Arial', text_size), width=5, text=reaction.weight)
         weight_entry.grid(row = 0, column = i, sticky=tkinter.NSEW)
         i -=- 1
         self.add_species_label(reaction, frame, reaction.educts, i, text_size)
@@ -360,14 +371,14 @@ class ListGui(CenterRootWindow):
             adjustable_r = tkinter.IntVar()
             adjustable_r.set(reverse.is_adjustable)
             self.no_garbage_collector.append(adjustable_r)
-            box = tkinter.Checkbutton(frame, variable=adjustable_r, disabledforeground="green", state=tkinter.DISABLED)
+            state = tkinter.NORMAL
+            if reverse.is_required:
+                state = tkinter.DISABLED
+            box = tkinter.Checkbutton(frame, variable=adjustable_r, disabledforeground="green", state=state)
+            adjustable_r.trace_add('write', lambda a,b,c, reac=reverse: toggle_btn(reac))
             box.grid(row=0, column=i, sticky=tkinter.NSEW)
             i -= - 1
-            weight = tkinter.DoubleVar()
-            weight.set(reverse.weight)
-            self.no_garbage_collector.append(weight)
-            weight_entry = tkinter.Entry(frame, font=('Arial', text_size), width=5, textvariable=weight,
-                                         state=tkinter.DISABLED)
+            weight_entry = tkinter.Label(frame, font=('Arial', text_size), width=5, text=reverse.weight)
             weight_entry.grid(row=0, column=i, sticky=tkinter.NSEW)
             i -= - 1
             title = "{:10.3E}".format(reverse.get_A_k(True))
@@ -379,7 +390,7 @@ class ListGui(CenterRootWindow):
                                   borderwidth=1, cursor="bottom_left_corner", activebackground="gray")
             label.bind("<Button-1>", lambda event, reac=reverse: self.show_graph(reac))
             label.grid(row=0, column=i, sticky=tkinter.NSEW)
-            widgets["A_k_label"] = label
+            widgets["r_A_k_label"] = label
             i -= - 1
             value = 0
             if reverse.old_A_k != 0:
@@ -388,27 +399,27 @@ class ListGui(CenterRootWindow):
                 value = math.log(reverse.A_k / reverse.old_A_k) / math.log(2.)
             status = StatusBarWidget(frame, text_size * 5, value)
             status.grid(row=0, column=i, sticky=tkinter.NS)
-            widgets["A_k_status"] = status
+            widgets["r_A_k_status"] = status
             i -= - 1
             label = tkinter.Label(frame, text="{:g}".format(reverse.get_beta_k(True)), width=10, anchor=tkinter.E,
                                   font=("Arial", text_size), cursor="bottom_left_corner", activebackground="gray")
             label.bind("<Button-1>", lambda event, reac = reverse: self.show_graph(reac))
             label.grid(row=0, column=i, sticky=tkinter.NSEW)
-            widgets["beta_k_label"] = label
+            widgets["r_beta_k_label"] = label
             i -= - 1
             status = StatusBarWidget(frame, text_size * 5, reverse.beta_k - reverse.old_beta_k)
             status.grid(row=0, column=i, sticky=tkinter.NS)
-            widgets["beta_k_status"] = status
+            widgets["r_beta_k_status"] = status
             i -= - 1
             label = tkinter.Label(frame, text="{:g}".format(reverse.E_k * 1e-3), width=10, anchor=tkinter.E,
                                   font=("Arial", text_size), cursor="bottom_left_corner", activebackground="gray")
             label.bind("<Button-1>", lambda event, reac=reverse: self.show_graph(reac))
             label.grid(row=0, column=i, sticky=tkinter.NSEW)
-            widgets["E_k_label"] = label
+            widgets["r_E_k_label"] = label
             i -= - 1
             status = StatusBarWidget(frame, text_size * 5, (reverse.E_k - reverse.old_E_k) / 1e3 / 5.)
             status.grid(row=0, column=i, sticky=tkinter.NS)
-            widgets["E_k_status"] = status
+            widgets["r_E_k_status"] = status
             i -= - 1
             label = tkinter.Frame(frame, width=1, bg="black")
             label.grid(row=0, column=i, sticky=tkinter.NSEW)
@@ -428,6 +439,7 @@ class ListGui(CenterRootWindow):
     def edit_reaction(self, reaction):
         pre_cat = reaction.category
         ReactionEditorGui.UniversalEditorGui(reaction).center().show()
+        update_adjustables()
         if pre_cat == reaction.category:
             self.update_reaction_frame(reaction)
         else:
@@ -441,10 +453,74 @@ class ListGui(CenterRootWindow):
         (reaction_category, j, widgets) = self.reaction_mapper.pop(reaction_frame_name)
         for child in frame.winfo_children():
             child.destroy()
-        widgets = self.add_reaction_to_frame(reverse, frame,
-                                             Config.text_size)
+        widgets = self.add_reaction_to_frame(reverse, frame)
         self.reaction_mapper[str(frame)] = (reaction_category, j, widgets)
         self.reverse_mapper[reverse] = str(frame)
+
+    def update_reaction_values(self, reaction):
+        reaction_frame_name = self.reverse_mapper.pop(reaction)
+        frame = self.container.nametowidget(reaction_frame_name)
+        (reaction_category, j, widgets) = self.reaction_mapper.pop(reaction_frame_name)
+
+        if reaction.is_stick:
+            title = "S=" + "{:6.5F}".format(reaction.get_A_k(True))
+        else:
+            title = "A=" + "{:10.3E}".format(reaction.get_A_k(True))
+        label = widgets["A_k_label"]
+        label.configure(text = title)
+        value = 0
+        if reaction.old_A_k != 0:
+            value = math.log10(reaction.A_k/reaction.old_A_k)
+        if reaction.is_stick:
+            value = math.log(reaction.A_k/reaction.old_A_k) / math.log(2.)
+        status = widgets["A_k_status"]
+        status.set_size(value)
+
+        label = widgets["beta_k_label"]
+        label.configure(text="{:g}".format(reaction.get_beta_k(True)))
+
+        status = widgets["beta_k_status"]
+        status.set_size(reaction.beta_k - reaction.old_beta_k)
+
+        label = widgets["E_k_label"]
+        label.configure(text="{:g}".format(reaction.E_k*1e-3))
+
+        status = widgets["E_k_status"]
+        status.set_size((reaction.E_k-reaction.old_E_k)/1e3/5.)
+
+        if reaction.reverse_reaction is not None:
+            reverse = reaction.reverse_reaction
+
+            title = "{:10.3E}".format(reverse.get_A_k(True))
+            if reverse.is_stick:
+                title = "S=" + title
+            else:
+                title = "A=" + title
+            label = widgets["r_A_k_label"]
+            label.configure(text=title)
+
+            value = 0
+            if reverse.old_A_k != 0:
+                value = math.log10(reverse.A_k / reverse.old_A_k)
+            if reverse.is_stick:
+                value = math.log(reverse.A_k / reverse.old_A_k) / math.log(2.)
+            status = widgets["r_A_k_status"]
+            status.set_size(value)
+
+            label = widgets["r_beta_k_label"]
+            label.configure(text="{:g}".format(reverse.get_beta_k(True)))
+
+            status = widgets["r_beta_k_status"]
+            status.set_size(reverse.beta_k - reverse.old_beta_k)
+
+            label = widgets["r_beta_k_label"]
+            label.configure(text="{:g}".format(reverse.E_k * 1e-3))
+
+            status = widgets["r_E_k_status"]
+            status.set_size((reverse.E_k - reverse.old_E_k) / 1e3 / 5.)
+
+        self.reaction_mapper[str(frame)] = (reaction_category, j, widgets)
+        self.reverse_mapper[reaction] = str(frame)
 
     def show_graph(self, reac: Reaction):
         top = Toplevel(bg="white")
@@ -511,34 +587,4 @@ class ListGui(CenterRootWindow):
 
         top.mainloop()
         top.quit()
-
-class StatusBarWidget(tkinter.Frame):
-    def __init__(self, master, width, size=0.):
-        tkinter.Frame.__init__(self, master)
-        self.width = width - 3
-        self.canvas = tkinter.Canvas(self, height=13, width=width)
-        self.canvas.grid(sticky=tkinter.NSEW)
-        self.set_size(size)
-
-    def set_size(self, size):
-        for ID in self.canvas.find_all():
-            self.canvas.delete(ID)
-        self.canvas.create_rectangle(2, 2, self.width + 2, 14,
-                                     outline="black")
-        if size > 1.: size = 1.
-        if size < -1.: size = -1.
-        if size != 0.:
-            w = self.canvas.create_rectangle(self.width//2 + 3, 3, self.width//2 + int(self.width/2 * size) + 3, 14,
-                                             fill=self.color(size), width=0)
-        self.canvas.create_line(self.width//2 + 2, 1, self.width//2 + 2, 14, width=1, fill="black")
-
-
-    def color(self, size):
-        size = abs(size)
-        r = min((255, int(500 * size)))
-        g = max((0, min((255, int(400 * (1 - size))))))
-        return "#%2.2x%2.2x%2.2x" % (r, g, 0)
-
-
-
 

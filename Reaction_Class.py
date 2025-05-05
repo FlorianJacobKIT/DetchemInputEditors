@@ -34,8 +34,10 @@ class Reaction(Checkable, SelfFixing, EditorAdjusted):
     category = ""
     weight = 1
     is_adjustable = True
+    is_required = False
     exponent = -2
     reaction_id: int = None
+    temperature_independent_term: float = None
 
 
     def no_show(self) -> list[str]:
@@ -46,6 +48,9 @@ class Reaction(Checkable, SelfFixing, EditorAdjusted):
         elements.append("_reverse_reaction")
         elements.append("reaction_id")
         elements.append("exponent")
+        elements.append("is_required")
+        elements.append("is_adjustable")
+        elements.append("temperature_independent_term")
         return elements
 
     def no_edit(self) -> list[str]:
@@ -279,6 +284,19 @@ class Reaction(Checkable, SelfFixing, EditorAdjusted):
             return k
         Tfactor=T**self.old_beta_k
         return self.old_A_k * Tfactor * math.exp(-self.old_E_k/R/T)
+
+    def get_surface_stoic(self):
+        L=[(s,stoic) for s,stoic in list(self.products.items())]
+        L+= [(s,-stoic) for s,stoic in list(self.educts.items())]
+        d=dict()
+        for s,stoic in L:
+            spec = ThermalDataReader.find_species(s)
+            if spec.is_adsorpt():
+                if s in d:
+                    d[s]+=stoic
+                else:
+                    d[s]=stoic
+        return d
 
 
 

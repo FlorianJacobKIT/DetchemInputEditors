@@ -35,6 +35,8 @@ class UniversalEditorGui(CenterWindow):
             state = tkinter.NORMAL
             if key in no_edit:
                 state = tkinter.DISABLED
+            if key == "is_adjustable" and obj.is_required:
+                state = tkinter.DISABLED
             if type(value) == dict:
                 frame = tkinter.Frame(parent, name=key.lower(), borderwidth=2, relief=tkinter.RIDGE)
                 frame.grid(column=0, row=i, columnspan=2, sticky="nsew", pady=2)
@@ -164,7 +166,6 @@ class UniversalEditorGui(CenterWindow):
             reaction: Reaction_Class.Reaction = obj
             if reaction.is_reversible:
                 reverse = reaction.reverse_reaction
-                print(reverse.is_reversible)
                 frame = tkinter.Frame(self, height=20)
                 frame.grid(column=0, row=i, sticky="w")
                 i -= - 1
@@ -183,7 +184,6 @@ class UniversalEditorGui(CenterWindow):
                 j = self.generate_fields(reverse, frame, no_edit, no_show, False)
                 i += j
         if add_save_btn:
-            print("Save Btn")
             save_btn = tkinter.Button(self, text="Save", command=self.save)
             save_btn.grid(row=i, column=0, sticky='nsew')
             close_btn = tkinter.Button(self, text="Cancel (Don't Save)", command=lambda: self.ask_destroy())
@@ -204,7 +204,6 @@ class UniversalEditorGui(CenterWindow):
         if isinstance(dupe, Checkable):
             check: Checkable = dupe
             if check.check():
-                print(self.entry_vars.keys())
                 dict_version = self.read_entrys(self.reaction)
                 if self.reaction.reverse_reaction is not None:
                     reverse_dupe = dict_version["_reverse_reaction"]

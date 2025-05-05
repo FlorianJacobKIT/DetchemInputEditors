@@ -9,6 +9,7 @@ from adjust_util import MaterialData
 from adjust_util.AdjustData import AdjustDataHolder, TemperatureRange
 from adjust_util.MaterialData import Species
 from adjust_util.TextModifiers import bcolors
+from adjust_util.linear import find_dependents
 from adjust_util.logarrhenius import *
 
 
@@ -382,32 +383,6 @@ class AdjustClass(object):
         self.adjust_cov()
         return OK
 
-    def write_mechanism(self):
-        # write new mechanism
-        outfile = open(self.outfilename, "w")
-        outfile2 = open(self.outfilename + ".fixed", "w")
-        print("SURFACE MECHANISM", file=outfile2)
-        print("writing", self.outfilename)
-        for it1 in list(self.infile.items()):
-            if str(it1) != "<MECHANISM>":
-                print(it1.fulltext(), file=outfile)
-            else:
-                print("<MECHANISM>", file=outfile)
-                for it2 in list(it1.items()):
-                    if str(it2) != "<SURFACE>":
-                        print(it2.fulltext(2), file=outfile)
-                    else:
-                        print("  <SURFACE " + it2.attr + ">", file=outfile)
-
-                        for reac in self.mech.reactions():
-                            print(self.old2new[reac].fulltext(4), file=outfile)
-                            print(self.old2new[reac].shorttext(), file=outfile2)
-                        print("  </SURFACE>", file=outfile)
-                print("</MECHANISM>", file=outfile)
-        print("END", file=outfile2)
-        outfile.close()
-        outfile2.close()
-
     def __str__(self):
         string = ""
         string += "T_ref: " + str(self.T_ref) + "\n"
@@ -421,3 +396,49 @@ class AdjustClass(object):
         return string
 
 
+def update_adjustables(gui):
+    import ScrollableGui
+    gui: ScrollableGui.ListGui
+    wlist=[] # wdigets
+    vlist=[] # vectors
+    ulist=[] # fixed vectors
+
+    reversible_eqs: list[Reaction_Class.Reaction] = list()
+    reverses = dict()
+    non_reversible_eqs = list()
+    for category, reactions in global_vars.reactions.items():
+        for reaction in reactions:
+            if reaction.reverse_reaction is not None:
+                if reaction not in reverses:
+                    reversible_eqs.append(reaction)
+                    reverses[reaction.reverse_reaction] = reaction
+            else:
+                non_reversible_eqs.append(reaction)
+    for freac in reversible_eqs:
+        rreac = freac.reverse_reaction
+
+        if freac.is_adjustable:
+            if not rreac.is_adjustable: # only freac is adjustable
+                wlist.append(freac)
+                vlist.append(freac.get_surface_stoic())
+            else: # both reactions are adjustable, no need to check
+                freac.is_required = False
+                rreac.is_required = False
+        else :
+            if rreac.is_adjustable: # only rreac is adjustable
+                wlist.append(rreac)
+                vlist.append(rreac.get_surface_stoic())
+            else : # none of the two is adjustable
+                ulist.append(freac.get_surface_stoic())
+    # find linear combinations
+    ilist=find_dependents(ulist,vlist)
+    # change status of widgets
+    for dependent,w in zip(ilist,wlist):
+        if dependent:
+            w.is_required = True
+            if w in reverses:
+                gui.update_reaction_frame(reverses[w])
+            else:
+                gui.update_reaction_frame(w)
+        else:
+            w.is_required = False
