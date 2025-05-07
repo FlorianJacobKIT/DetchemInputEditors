@@ -4,12 +4,13 @@ import tkinter
 
 class CenterGuiMixin(tkinter.Toplevel):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, master):
+        super().__init__(master=master)
         self.center()
 
     def center(self):
         self.update()
+        self.iconbitmap("Logo.ico")
         user32 = ctypes.windll.user32
         screensize = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
         screen_width = screensize[0]
@@ -24,8 +25,8 @@ class CenterGuiMixin(tkinter.Toplevel):
         return self
 
 class CenterWindow(CenterGuiMixin):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, master):
+        super().__init__(master=master)
 
 
 class CenterRootWindow(tkinter.Tk, CenterGuiMixin):
