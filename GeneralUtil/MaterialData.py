@@ -3,10 +3,10 @@ from enum import Enum
 
 import periodictable
 
-from adjust_util import Errors
-from adjust_util.AdjustData import AdjustDataHolder
-from adjust_util.Nat_Constants import R
-from adjust_util.algebra import EquationVariable
+from GeneralUtil import Errors
+from MechanismEditorPackage.adjust_util.AdjustData import AdjustDataHolder
+from GeneralUtil.Nat_Constants import R
+from GeneralUtil.algebra import EquationVariable
 
 
 class State(Enum):
@@ -26,6 +26,19 @@ def convert_state(letter:str):
     if letter == "C":
         return State.Crystal
     return State.Unknown
+
+def reconvert_state(state: State):
+        if state == State.Gas:
+            return "G"
+        if state == State.Liquid:
+            return "L"
+        if state == State.Solid:
+            return "S"
+        if state == State.Crystal:
+            return "C"
+        if state == State.Unknown:
+            return "?"
+        return "?"
     #raise NameError("Value \"" + letter + "\" not convertable")
 
 
@@ -35,6 +48,7 @@ class Species:
     _coefficient: list[float]
     _atoms: dict[periodictable.core.Isotope,float]
     _name:str
+    _comment:str
     _T_min:float
     _T_max:float
     _T_switch:float
@@ -110,6 +124,14 @@ class Species:
         self._coefficient = []
         self._atoms = dict()
 
+    @property
+    def comment(self):
+        return self._comment
+
+    @comment.setter
+    def comment(self, comment):
+        self._comment = comment
+
     def __str__(self):
         return self._name
 
@@ -128,9 +150,9 @@ class Species:
 
     def get_temp_coefficients(self, T: float):
         if T>self._T_max:
-            raise Errors.OutOfBoundError("temperature",T,self._T_min,self._T_max)
+            raise Errors.OutOfBoundError("temperature", T, self._T_min, self._T_max)
         if T<self._T_min:
-            raise Errors.OutOfBoundError("temperature",T,self._T_min,self._T_max)
+            raise Errors.OutOfBoundError("temperature", T, self._T_min, self._T_max)
         a = self._coefficient[7:14]
         if T > self.get_temp_switch():
             a = self._coefficient[:7]

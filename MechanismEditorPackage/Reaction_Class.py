@@ -2,11 +2,12 @@ import math
 import tkinter.messagebox
 from typing import Callable
 
-from Interfaces import Checkable, SelfFixing, EditorAdjusted
-from adjust_util import ThermalDataReader
-from adjust_util.MaterialData import Species
-from adjust_util.Nat_Constants import R
-from adjust_util.logarrhenius import logArrheniusTerm
+from MechanismEditorPackage import global_vars
+from MechanismEditorPackage.Interfaces import Checkable, SelfFixing, EditorAdjusted
+from GeneralUtil import ThermalDataReader
+from GeneralUtil.MaterialData import Species
+from GeneralUtil.Nat_Constants import R
+from MechanismEditorPackage.adjust_util.logarrhenius import logArrheniusTerm
 
 reaction_counter = 0
 
@@ -58,7 +59,7 @@ class Reaction(Checkable, SelfFixing, EditorAdjusted):
         return elements
 
     def __init__(self, category:str, educts=None, products=None, A_k = 0, beta_k = 0, E_k = 0, is_stick = False, is_reversible = False, is_disabled = False):
-        import global_vars
+        from MechanismEditorPackage import global_vars
         self.reaction_id = get_reaction_counter()
         self.orders = {}
         self.epsilon = {}
@@ -199,6 +200,10 @@ class Reaction(Checkable, SelfFixing, EditorAdjusted):
             return self._A_k * self.temperature_independent_term
         return self._A_k
 
+    def set_A_k(self, value, raw= False):
+        if raw: self._A_k = value
+        else: self.A_k = value
+
     @A_k.setter
     def A_k(self, value):
         if self.is_stick:
@@ -218,6 +223,10 @@ class Reaction(Checkable, SelfFixing, EditorAdjusted):
             return self._beta_k + 0.5
         return self._beta_k
 
+    def set_beta_k(self, value, raw= False):
+        if raw: self._beta_k = value
+        else: self.beta_k = value
+
     @beta_k.setter
     def beta_k(self, value):
         if self.is_stick:
@@ -226,11 +235,20 @@ class Reaction(Checkable, SelfFixing, EditorAdjusted):
             self._beta_k = value
 
     @property
-    def E_k(self, raw= False):
+    def E_k(self):
+        if self.is_stick:
+            return self._E_k
+        return self._E_k
+
+    def get_E_k(self, raw= False):
         if raw: return self._E_k
         if self.is_stick:
             return self._E_k
         return self._E_k
+
+    def set_E_k(self, value, raw= False):
+        if raw: self._E_k = value
+        else: self.E_k = value
 
     @E_k.setter
     def E_k(self, value):
@@ -245,20 +263,20 @@ class Reaction(Checkable, SelfFixing, EditorAdjusted):
     def Kp2Kc(self, T):
         K = 1.0
         for s, stoic in self.educts.items():
-            spec = ThermalDataReader.find_species(s)
+            spec = ThermalDataReader.find_species(s, global_vars.thermalDataMap)
             K /= (spec.c0(T)) ** stoic
         for s, stoic in self.products.items():
-            spec = ThermalDataReader.find_species(s)
+            spec = ThermalDataReader.find_species(s, global_vars.thermalDataMap)
             K *= (spec.c0(T)) ** stoic
         return K
 
     def sum_F(self,generic_function:Callable[[Species],float]):
         value=0
         for s,stoic in list(self.educts.items()):
-            spec = ThermalDataReader.find_species(s)
+            spec = ThermalDataReader.find_species(s, global_vars.thermalDataMap)
             value -= stoic*generic_function(spec)
         for s,stoic in list(self.products.items()):
-            spec = ThermalDataReader.find_species(s)
+            spec = ThermalDataReader.find_species(s, global_vars.thermalDataMap)
             value += stoic*generic_function(spec)
         return value
 
@@ -270,29 +288,17 @@ class Reaction(Checkable, SelfFixing, EditorAdjusted):
         return self.sum_F(lambda s : s.G_adjustable())
 
     def kf(self,T):
-        if self.is_stick:
-            k = self._A_k * self.temperature_independent_term * math.sqrt(T)
-            k *= T ** self._beta_k
-            k *= math.exp(-self._E_k / R / T)
-            return k
-        Tfactor=T**self._beta_k
-        return self._A_k * Tfactor * math.exp(-self._E_k/R/T)
+        return self.A_k * T ** self.beta_k * math.exp(-self.E_k/R/T)
 
     def kf_old(self,T):
-        if self.is_stick:
-            k = self.old_A_k * self.temperature_independent_term * math.sqrt(T)
-            k *= T ** self.old_beta_k
-            k *= math.exp(-self.old_E_k / R / T)
-            return k
-        Tfactor=T**self.old_beta_k
-        return self.old_A_k * Tfactor * math.exp(-self.old_E_k/R/T)
+        return self.old_A_k * T ** self.old_beta_k * math.exp(-self.old_E_k/R/T)
 
     def get_surface_stoic(self):
         L=[(s,stoic) for s,stoic in list(self.products.items())]
         L+= [(s,-stoic) for s,stoic in list(self.educts.items())]
         d=dict()
         for s,stoic in L:
-            spec = ThermalDataReader.find_species(s)
+            spec = ThermalDataReader.find_species(s, global_vars.thermalDataMap)
             if spec.is_adsorpt():
                 if s in d:
                     d[s]+=stoic

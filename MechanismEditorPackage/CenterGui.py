@@ -4,8 +4,8 @@ import tkinter
 
 class CenterGuiMixin(tkinter.Toplevel):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, master):
+        super().__init__(master=master)
         self.center()
 
     def center(self):
@@ -25,8 +25,8 @@ class CenterGuiMixin(tkinter.Toplevel):
         return self
 
 class CenterWindow(CenterGuiMixin):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, master):
+        super().__init__(master=master)
 
 
 class CenterRootWindow(tkinter.Tk, CenterGuiMixin):

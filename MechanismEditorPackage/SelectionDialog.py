@@ -1,7 +1,7 @@
 import math
 import tkinter as tk
 
-from CenterGui import CenterRootWindow
+from MechanismEditorPackage.CenterGui import CenterRootWindow
 
 
 class GeneralDialog(CenterRootWindow):

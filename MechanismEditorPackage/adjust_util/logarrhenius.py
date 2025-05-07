@@ -1,7 +1,7 @@
 import math
 
-import adjust_util.algebra as algebra
-from adjust_util.Nat_Constants import R
+import GeneralUtil.algebra as algebra
+from GeneralUtil.Nat_Constants import R
 
 
 class logArrheniusTerm(object):  # term of form a + b*ln(T) + c/T
@@ -17,7 +17,7 @@ class logArrheniusTerm(object):  # term of form a + b*ln(T) + c/T
         if isinstance(other,logArrheniusTerm):
             return logArrheniusTerm(self.a+other.a, self.b+other.b,
                                     self.c+other.c)
-        elif isinstance(other,algebra.LinearCombination):
+        elif isinstance(other, algebra.LinearCombination):
             return other+self
         else:
             return logArrheniusTerm(self.a+float(other),self.b,self.c)
@@ -62,10 +62,10 @@ def log2therm(LAT):
     return (-LAT.b,LAT.c,-LAT.b-LAT.a)
 
 def logArrheniusFit(log_k):
-    a=algebra.EquationVariable("a")
-    b=algebra.EquationVariable("b")
-    c=algebra.EquationVariable("c")
-    LES=algebra.LinearEquationSystem()
+    a= algebra.EquationVariable("a")
+    b= algebra.EquationVariable("b")
+    c= algebra.EquationVariable("c")
+    LES= algebra.LinearEquationSystem()
     for T in log_k:
         LES.add(log_k[T] , a+b*math.log(T)+c/T)
     assert(len(LES)>=3)

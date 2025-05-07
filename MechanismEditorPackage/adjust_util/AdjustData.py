@@ -1,6 +1,6 @@
 import json
 
-from Interfaces import EditorAdjusted, Checkable
+from MechanismEditorPackage.Interfaces import EditorAdjusted, Checkable
 
 
 # Relevant Adjust Data:

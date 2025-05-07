@@ -1,12 +1,12 @@
 from subprocess import call
 
-import SelectionDialog
+from MechanismEditorPackage import SelectionDialog
 
-keys = ["MechanismEditor"]
+keys = ["MechanismEditor","ThermalDataCompare"]
 
 mode = SelectionDialog.GeneralDialog("Select Input File Editor",
-                                   keys).center().show()
+                                     keys).center().show()
 if mode == "":
     exit(0)
 
-call(["python", mode + ".py"])
+call(["python", mode + "Package/" + mode + ".py"])

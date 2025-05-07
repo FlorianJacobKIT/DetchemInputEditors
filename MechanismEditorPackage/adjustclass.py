@@ -1,16 +1,13 @@
 import copy
+from tkinter import messagebox
 
-import numpy as np
-
-import Reaction_Class
-import adjust_util.algebra
-import global_vars
-from adjust_util import MaterialData
-from adjust_util.AdjustData import AdjustDataHolder, TemperatureRange
-from adjust_util.MaterialData import Species
-from adjust_util.TextModifiers import bcolors
-from adjust_util.linear import find_dependents
-from adjust_util.logarrhenius import *
+from MechanismEditorPackage import Reaction_Class
+from MechanismEditorPackage import global_vars
+from MechanismEditorPackage.adjust_util.AdjustData import AdjustDataHolder, TemperatureRange
+from GeneralUtil.MaterialData import Species
+from GeneralUtil.TextModifiers import bcolors
+from MechanismEditorPackage.adjust_util.linear import find_dependents
+from MechanismEditorPackage.adjust_util.logarrhenius import *
 
 
 class AdjustClass(object):
@@ -216,7 +213,6 @@ class AdjustClass(object):
         ##        print LES2
 
         # new mechanism , linear equations for thermdata
-        OK = True
         for reac in variables:
             reac: Reaction_Class.Reaction
             nreac = reac
@@ -249,7 +245,12 @@ class AdjustClass(object):
         ##        for i in y: print i,"\t",y[i]
 
         # use species with lowest cp as reference
+        execution_counter = 0
         while True:
+            if execution_counter > 1000:
+                messagebox.showerror("Error", "Maximum number of iterations reached")
+                return -1
+            execution_counter -=- 1
             done = True
             cp0 = 0
             for s, term in list(y.items()):
@@ -286,7 +287,7 @@ class AdjustClass(object):
         for i in y:
             print("%8s   cp=%6.2f   H0=%8.0f   S0=%6.2f" % (str(i), i.cp(298.), i.H(298.), i.S(298.)))
 
-        return OK
+        return 0
 
     def adjust_cov(self):
         # coverage dependencies ....
@@ -380,7 +381,8 @@ class AdjustClass(object):
         OK = False
         for count in range(5):
             print("Try: ",count)
-            if self.adjust_rates():
+            result = self.adjust_rates()
+            if result >= 0:
                 OK = True
                 break
         self.adjust_cov()

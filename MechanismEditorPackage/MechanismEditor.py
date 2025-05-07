@@ -1,15 +1,12 @@
-import copy
-import math
 import os
 from tkinter import filedialog
 
-import global_vars
-import Reaction_Class
-import ScrollableGui
-import adjust_util.ThermalDataReader
-from Text_Util import add_reaction_to_line
-from adjust_util.AdjustData import *
-from adjustclass import AdjustClass
+from MechanismEditorPackage import global_vars
+from GeneralUtil import ThermalDataReader
+from MechanismEditorPackage import Reaction_Class
+from MechanismEditorPackage import ScrollableGui
+from MechanismEditorPackage.adjust_util.AdjustData import *
+from MechanismEditorPackage.adjustclass import AdjustClass
 
 ### IMPORTANT ###
 # Lines starting with one start (*) will be seen as disabled reactions
@@ -44,6 +41,8 @@ if not os.path.isfile(inp_file_name):
             f.write(json_Version)
         raise FileNotFoundError("Could not find adjust.json or adjust.txt file. Created adjust.json file. Please adjust it to your needs")
 
+
+
 target = open(inp_file_name, "r")
 coder = target.read()
 target.close()
@@ -52,7 +51,7 @@ data.fromJSON(coder)
 A = AdjustClass()
 A.adjust_data = data
 
-adjust_util.ThermalDataReader.read_all_file(os.path.join(global_vars.parent, "thermdata.txt"), data)
+global_vars.thermalDataMap = ThermalDataReader.read_all_file(os.path.join(global_vars.parent, "thermdata.txt"), data)
 
 file = open(dir_name, 'r')
 lines = file.readlines()
@@ -142,6 +141,7 @@ while i < len(lines):
             sign = -1
             reversible = True
         j -=- 1
+    print(text)
     A_k = float(text[46:55])
     if not is_stick:
         # Mol/cm2 -> Mol/m2 and Mol/cm3 -> Mol/m3
@@ -149,7 +149,7 @@ while i < len(lines):
     beta_k = float(text[56:62])
     # kJ/mol -> J/mol
     E_k = float(text[63:72]) * 1e3
-    reaction = Reaction_Class.Reaction(category, input_spec, output_spec, A_k, beta_k, E_k,is_stick,reversible, disabled==1)
+    reaction = Reaction_Class.Reaction(category, input_spec, output_spec, A_k, beta_k, E_k, is_stick, reversible, disabled == 1)
     reaction.exponent = exponent
     reactions[category].append(reaction)
     i -=- 1

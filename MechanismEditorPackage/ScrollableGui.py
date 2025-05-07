@@ -5,14 +5,15 @@ import tkinter.messagebox
 from tkinter import *
 from tkinter.scrolledtext import ScrolledText
 
-import Config
-import EditorGui
-import ReactionEditorGui
-import global_vars
-from CenterGui import CenterRootWindow
-from Reaction_Class import Reaction
-from Widgets import StatusBarWidget
-from adjustclass import AdjustClass, update_adjustables
+from MechanismEditorPackage import Config
+from MechanismEditorPackage import EditorGui
+from MechanismEditorPackage import ReactionEditorGuiUpdate
+from MechanismEditorPackage import global_vars
+from MechanismEditorPackage.CenterGui import CenterRootWindow
+from MechanismEditorPackage.Reaction_Class import Reaction
+from MechanismEditorPackage.SpeciesDisplay import SpeciesDisplayGUI
+from MechanismEditorPackage.Widgets import StatusBarWidget
+from MechanismEditorPackage.adjustclass import AdjustClass, update_adjustables
 
 
 class ListGui(CenterRootWindow):
@@ -47,7 +48,7 @@ class ListGui(CenterRootWindow):
 
         def update_adjust(adjust_object: AdjustClass) -> None:
             adjust_data = adjust_object.adjust_data
-            EditorGui.UniversalEditorGui(adjust_data).show()
+            EditorGui.UniversalEditorGui(self,adjust_data).show()
             adjust_object.adjust_data = adjust_data
             adjust_config = os.path.join(global_vars.parent, "adjust.json")
             target = open(adjust_config, "w")
@@ -55,8 +56,11 @@ class ListGui(CenterRootWindow):
             target.close()
 
 
-        new_btn = tkinter.Button(self,text="Edit Adjust Data (use careful)",command=lambda :update_adjust(adjust), width=width, font=("Arial", text_size))
-        new_btn.grid(column=1, row=0, pady = (5,0), padx = 5, sticky="ew")
+        edit_adjust_btn = tkinter.Button(self,text="Edit Adjust Data (use careful)",command=lambda :update_adjust(adjust), width=width, font=("Arial", text_size))
+        edit_adjust_btn.grid(column=1, row=0, pady = (5,0), padx = 5, sticky="ew")
+
+        species_btn = tkinter.Button(self,text="Show species data",command=lambda :SpeciesDisplayGUI(self, self.adjust_obj).center().show(), width=width, font=("Arial", text_size))
+        species_btn.grid(column=1, row=1, pady = (5,0), padx = 5, sticky="ew")
 
         # Secures the placement of all other elements
         space_frame = tkinter.Frame(self)
@@ -95,10 +99,21 @@ class ListGui(CenterRootWindow):
         #    listNodes.insert(END, str(x))
 
         i = 0
+        def hide_category(event=None, category=None):
+            if category == None:
+                return
+            if category in self.hidden_categorys:
+                self.hidden_categorys.remove(category)
+            else:
+                self.hidden_categorys.append(category)
+            self.update_search()
+
         for reaction_category in global_vars.reactions:
-            header_label = tkinter.Label(self.container, name="header:" + reaction_category, text=str(reaction_category).ljust(160,"-"), fg="gray", font=("Arial", (Config.text_size * 5)//4, "bold"),anchor=tkinter.W)
+            header_label = tkinter.Label(self.container, name="header:" + reaction_category, text=(" V " + str(reaction_category)).ljust(160,"-"), fg="gray", font=("Arial", (
+                        Config.text_size * 5) // 4, "bold"), anchor=tkinter.W)
             self.reaction_mapper[str(header_label)] = (reaction_category, -1, dict())
             self.reverse_mapper[reaction_category] = str(header_label)
+            header_label.bind("<Button-1>", lambda event, cat = reaction_category: hide_category(event, cat))
             header_label.grid(row=i, column=0, columnspan=3, sticky='nsew')
             i -=- 1
             for j in range(len(global_vars.reactions[reaction_category])):
@@ -165,11 +180,17 @@ class ListGui(CenterRootWindow):
 
 
         for category in global_vars.reactions:
+            hidden = category in self.hidden_categorys
+            if hidden:
+                text = (" > " + str(category)).ljust(160, "-")
+            else:
+                text = (" V " + str(category)).ljust(160, "-")
             header_label_name = self.reverse_mapper[category]
             header_label = self.container.nametowidget(header_label_name)
+            header_label.config(text=text)
             header_label.grid(row=i, column=0, columnspan=3, sticky='nsew')
             i -=- 1
-            if category not in self.hidden_categorys:
+            if not hidden:
                 for index in range(len(global_vars.reactions[category])):
                     text = str(global_vars.reactions[category][index])
                     reaction_frame_name = self.reverse_mapper[global_vars.reactions[category][index]]
@@ -239,11 +260,22 @@ class ListGui(CenterRootWindow):
         self.reverse_mapper.clear()
         self.reverse_mapper.clear()
 
+        def hide_category(event=None, category=None):
+            if category == None:
+                return
+            if category in self.hidden_categorys:
+                self.hidden_categorys.remove(category)
+            else:
+                self.hidden_categorys.append(category)
+            self.update_search()
+
         i = 0
         for reaction_category in global_vars.reactions:
-            header_label = tkinter.Label(self.container, name="header:" + reaction_category, text=str(reaction_category).ljust(160,"-"), fg="gray", font=("Arial", (Config.text_size * 5)//4, "bold"),anchor=tkinter.W)
+            header_label = tkinter.Label(self.container, name="header:" + reaction_category, text=str(reaction_category).ljust(160,"-"), fg="gray", font=("Arial", (
+                        Config.text_size * 5) // 4, "bold"), anchor=tkinter.W)
             self.reaction_mapper[str(header_label)] = (reaction_category, -1, dict())
             self.reverse_mapper[reaction_category] = str(header_label)
+            header_label.bind("<Button-1>", lambda event, cat = reaction_category: hide_category(event, cat))
             header_label.grid(row=i, column=0, columnspan=3, sticky='nsew')
             i -=- 1
             for j in range(len(global_vars.reactions[reaction_category])):
@@ -297,7 +329,18 @@ class ListGui(CenterRootWindow):
         adjustable.trace_add('write', lambda a,b,c, reac = reaction: toggle_btn(reac))
         box.grid(row = 0, column = i, sticky=tkinter.NSEW)
         i -=- 1
-        weight_entry = tkinter.Label(frame, font=('Arial', text_size), width=5, text=reaction.weight)
+
+        def update_weight(reac: Reaction, var):
+            try:
+                reac.weight = var.get()
+            except tkinter.TclError:
+                pass
+        variable = tkinter.DoubleVar()
+        self.no_garbage_collector.append(variable)
+        variable.set(reaction.weight)
+
+        weight_entry = tkinter.Entry(frame, font=('Arial', text_size), width=5, textvariable=variable)
+        variable.trace_add('write', lambda a,b,c,reac = reaction,var = variable: update_weight(reac, var))
         weight_entry.grid(row = 0, column = i, sticky=tkinter.NSEW)
         i -=- 1
         self.add_species_label(reaction, frame, reaction.educts, i, text_size)
@@ -378,7 +421,12 @@ class ListGui(CenterRootWindow):
             adjustable_r.trace_add('write', lambda a,b,c, reac=reverse: toggle_btn(reac))
             box.grid(row=0, column=i, sticky=tkinter.NSEW)
             i -= - 1
-            weight_entry = tkinter.Label(frame, font=('Arial', text_size), width=5, text=reverse.weight)
+
+            variable = tkinter.DoubleVar()
+            self.no_garbage_collector.append(variable)
+            variable.set(reverse.weight)
+            weight_entry = tkinter.Entry(frame, font=('Arial', text_size), width=5, textvariable=variable)
+            variable.trace_add('write', lambda a, b, c, reac=reverse, var=variable: update_weight(reac, var))
             weight_entry.grid(row=0, column=i, sticky=tkinter.NSEW)
             i -= - 1
             title = "{:10.2E}".format(reverse.get_A_k(True))
@@ -411,7 +459,7 @@ class ListGui(CenterRootWindow):
             status.grid(row=0, column=i, sticky=tkinter.NS)
             widgets["r_beta_k_status"] = status
             i -= - 1
-            label = tkinter.Label(frame, text="{:10.2F}".format(reverse.E_k * 1e-3), width=10, anchor=tkinter.E,
+            label = tkinter.Label(frame, text="{:10.2F}".format(reverse.get_E_k(True) * 1e-3), width=10, anchor=tkinter.E,
                                   font=("Arial", text_size), cursor="bottom_left_corner", activebackground="gray")
             label.bind("<Button-1>", lambda event, reac=reverse: self.show_graph(reac))
             label.grid(row=0, column=i, sticky=tkinter.NSEW)
@@ -438,7 +486,7 @@ class ListGui(CenterRootWindow):
 
     def edit_reaction(self, reaction):
         pre_cat = reaction.category
-        ReactionEditorGui.UniversalEditorGui(reaction).center().show()
+        ReactionEditorGuiUpdate.ReactionEditorGui(self, reaction).center().show()
         if pre_cat == reaction.category:
             self.update_reaction_frame(reaction)
         else:

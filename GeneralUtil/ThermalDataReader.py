@@ -2,28 +2,32 @@ import os.path
 
 import periodictable
 
-import global_vars
-from adjust_util.AdjustData import AdjustDataHolder
-from adjust_util.MaterialData import Species, State, convert_state
+from MechanismEditorPackage import global_vars
+from MechanismEditorPackage.adjust_util.AdjustData import AdjustDataHolder
+from GeneralUtil.MaterialData import Species, State, convert_state
+
+
+
+defaultMapping: dict[str,str]
 
 issuetracker = dict()
 issuetracker["missing value"] = []
 issuetracker["formation error"] = []
 issuetracker["chem. error"] = []
-
 lineCounter = 0
-def read_all_file(file_name: str, ad_data:AdjustDataHolder):
-    global lineCounter
-    global_vars.thermalDataMap = dict()
+def read_all_file(file_name: str, ad_data:AdjustDataHolder = None) -> dict[str, Species]:
+    global lineCounter, defaultMapping, issuetracker
+    target: dict[str, Species] = dict()
     if not os.path.isfile(file_name):
         raise FileNotFoundError("Could not find file " + file_name)
     file = open(file_name, "r")
 
     surfaces: dict[str, tuple[str, int]] = dict()
-    for key,surface in ad_data.surface_side_value.items():
-        surfaces[key] = (key , 1)
-        for special in surface.special_surface_species:
-            surfaces[special] = (key, surface.special_surface_species[special])
+    if ad_data is not None:
+        for key,surface in ad_data.surface_side_value.items():
+            surfaces[key] = (key , 1)
+            for special in surface.special_surface_species:
+                surfaces[special] = (key, surface.special_surface_species[special])
 
 
     lines = file.readlines()
@@ -40,7 +44,10 @@ def read_all_file(file_name: str, ad_data:AdjustDataHolder):
 
     table = periodictable.core.default_table(None)
     while 1 == 1:
+        if lineCounter >= len(lines):
+            break
         header = lines[lineCounter]
+        header = header.replace("\n", "")
         if header.startswith("END"):
             break
         lineCounter += 1
@@ -50,6 +57,8 @@ def read_all_file(file_name: str, ad_data:AdjustDataHolder):
             break
         name = header[0:8].strip()
         species = Species(name, convert_state(header[44]))
+        comment = header[8:24]
+        species.comment = comment
         temp_list = header[45:].split()
         try:
             species.set_temp_min(float(temp_list[0]))
@@ -99,21 +108,25 @@ def read_all_file(file_name: str, ad_data:AdjustDataHolder):
                         issuetracker["missing value"].append(lineCounter)
                         species.add_coefficient(None)
 
-        species.check_adsorpt(surfaces, ad_data)
-        global_vars.thermalDataMap[name] = species
+        if ad_data is not None:
+            species.check_adsorpt(surfaces, ad_data)
+        target[name] = species
     file.close()
+    defaultMapping = dict()
+    return target
 
 
 
 
-def find_species(species:str) -> Species:
+def find_species(species:str, dictionary: dict[str, Species]) -> Species:
+    global defaultMapping
     values: Species
     error = NameError("Species not found")
-    values = global_vars.thermalDataMap.get(species, Species("", State.Unknown))
+    values = dictionary.get(species, Species("", State.Unknown))
     if str(values) == "":
-        if species in global_vars.defaultMapping:
-            return global_vars.thermalDataMap[str(global_vars.defaultMapping[species])]
-        alternativ = [x for x in global_vars.thermalDataMap.keys() if x.upper().startswith(species.upper())]
+        if species in defaultMapping:
+            return dictionary[str(defaultMapping[species])]
+        alternativ = [x for x in dictionary.keys() if x.upper().startswith(species.upper())]
         if len(alternativ) > 0:
             print("Did not find:", species,"\nDid you mean: ")
             for chem in range(len(alternativ)):
@@ -122,7 +135,7 @@ def find_species(species:str) -> Species:
             if answer == "": answer = "0"
             if answer.isdecimal():
                 try:
-                    global_vars.defaultMapping[species] = alternativ[int(answer)]
+                    defaultMapping[species] = alternativ[int(answer)]
                     species = str(alternativ[int(answer)])
                 except:
                     raise error
@@ -130,7 +143,7 @@ def find_species(species:str) -> Species:
                 raise error
         else:
             raise error
-    return  global_vars.thermalDataMap[species]
+    return  dictionary[species]
 
 
 
