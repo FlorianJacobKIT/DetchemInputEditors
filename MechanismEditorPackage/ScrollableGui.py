@@ -5,7 +5,7 @@ import tkinter.messagebox
 from tkinter import *
 from tkinter.scrolledtext import ScrolledText
 
-from MechanismEditorPackage import Config
+from MechanismEditorPackage import Config, Text_Util
 from MechanismEditorPackage import EditorGui
 from MechanismEditorPackage import ReactionEditorGuiUpdate
 from MechanismEditorPackage import global_vars
@@ -124,10 +124,10 @@ class ListGui(CenterRootWindow):
                 reaction_frame.grid(row=i, column=0, sticky='nsew')
                 i -=- 1
 
-        save_btn = tkinter.Button(self, text="Save as copy", command=lambda: self.save("copy"), width=width, font=("Arial", text_size))
+        save_btn = tkinter.Button(self, text="Save as copy", command=lambda: Text_Util.save_file("copy"), width=width, font=("Arial", text_size))
         save_btn.grid(row=3, column=0, padx = 5, pady = 5, sticky='nsw')
 
-        overwrite_btn = tkinter.Button(self, text="Overwrite", command=lambda:self.save("overwrite"), width=width, font=("Arial", text_size))
+        overwrite_btn = tkinter.Button(self, text="Overwrite", command=lambda:Text_Util.save_file("overwrite"), width=width, font=("Arial", text_size))
         overwrite_btn.grid(row=3, column=1, padx = 5, pady = 5, sticky='nsw')
 
         def run_adjust():
@@ -154,8 +154,6 @@ class ListGui(CenterRootWindow):
         if answer:
             self.destroy()
 
-    def save(self, type) -> None:
-        save_file(type)
 
     def update_search(self):
         filter_txtstr = self.search_var.get()
@@ -635,27 +633,5 @@ class ListGui(CenterRootWindow):
         top.mainloop()
         top.quit()
 
-def save_file(save_content):
-    from Text_Util import add_reaction_to_line
-    if save_content == "copy" or save_content == "overwrite":
-        lines = global_vars.file_prefix
-        reactions = global_vars.reactions
-        for category in reactions:
-            lines.append("**** " + category + "\n")
-            for reaction in reactions[category]:
-                add_reaction_to_line(reaction, lines)
-                if reaction.is_reversible:
-                    reaction = reaction.reverse_reaction
-                    add_reaction_to_line(reaction, lines)
 
-        lines.append("END\n")
-        lines.append("-" * 72)
-
-        filename = global_vars.dir_name
-        if save_content == "copy":
-            split = global_vars.dir_name.split(".")
-            filename = split[0] + "_edit." + split[1]
-        file = open(filename, 'w')
-        file.writelines(lines)
-        file.close()
 

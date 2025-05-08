@@ -1,3 +1,44 @@
+import os.path
+
+from GeneralUtil import ThermalDataReader
+from MechanismEditorPackage import global_vars
+
+
+def save_file(save_content):
+    if save_content == "copy" or save_content == "overwrite":
+        lines = global_vars.file_prefix
+        reactions = global_vars.reactions
+        for category in reactions:
+            lines.append("**** " + category + "\n")
+            for reaction in reactions[category]:
+                add_reaction_to_line(reaction, lines)
+                if reaction.is_reversible:
+                    reaction = reaction.reverse_reaction
+                    add_reaction_to_line(reaction, lines)
+
+        lines.append("END\n")
+        lines.append("-" * 72)
+
+        filename = global_vars.dir_name
+        name = os.path.basename(filename)
+        path = os.path.dirname(filename)
+        if save_content == "copy":
+            filename = os.path.join(path, "adjust.json")
+            file = open(filename, "r")
+            content = file.read()
+            file.close()
+            path = os.path.join(path, "adjusted_mech")
+            os.makedirs(path, exist_ok=True)
+            filename = os.path.join(path, "adjust.json")
+            file = open(filename, "w")
+            file.write(content)
+            file.close()
+        filename = os.path.join(path, name)
+        file = open(filename, 'w')
+        file.writelines(lines)
+        file.close()
+        filename = os.path.join(path, "Thermdata.txt")
+        ThermalDataReader.write_thermdata_file(filename, global_vars.thermalDataMap)
 
 
 def add_reaction_to_line(reaction, lines):

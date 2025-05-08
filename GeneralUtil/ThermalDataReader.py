@@ -4,9 +4,7 @@ import periodictable
 
 from MechanismEditorPackage import global_vars
 from MechanismEditorPackage.adjust_util.AdjustData import AdjustDataHolder
-from GeneralUtil.MaterialData import Species, State, convert_state
-
-
+from GeneralUtil.MaterialData import Species, State, convert_state, reconvert_state
 
 defaultMapping: dict[str,str]
 
@@ -15,7 +13,8 @@ issuetracker["missing value"] = []
 issuetracker["formation error"] = []
 issuetracker["chem. error"] = []
 lineCounter = 0
-def read_all_file(file_name: str, ad_data:AdjustDataHolder = None) -> dict[str, Species]:
+
+def read_thermdata_file(file_name: str, ad_data:AdjustDataHolder = None) -> dict[str, Species]:
     global lineCounter, defaultMapping, issuetracker
     target: dict[str, Species] = dict()
     if not os.path.isfile(file_name):
@@ -115,7 +114,54 @@ def read_all_file(file_name: str, ad_data:AdjustDataHolder = None) -> dict[str, 
     defaultMapping = dict()
     return target
 
+def write_thermdata_file(file_name: str, target: dict[str, Species] ) -> bool:
+    file = open(file_name, "w")
 
+    lines = list()
+    for key, spec in target.items():
+        line = list("".ljust(80))
+        line[0:8] = list(str(spec).ljust(8))
+        line[8:24] = spec.comment
+
+        for i in range(24, 44, 5):
+            line[i + 4] = str(0)
+        i = 24
+        for atom in spec.get_atoms().keys():
+            name = str(atom)
+            nr = str(spec.get_atoms()[atom])
+            content = name.ljust(5 - len(nr))
+            content += nr
+            line[i:i + 5] = content
+            i += 5
+        line[48:58] = "{:10.2F}".format(spec.get_temp_min()).rjust(10)
+        line[58:68] = "{:10.2F}".format(spec.get_temp_max()).rjust(10)
+        line[68:76] = "{:8.2F}".format(spec.get_temp_switch()).rjust(8)
+        line[44] = reconvert_state(spec.state)
+        line[79] = "1"
+        lines.append("".join(line))
+
+        line = ""
+        i = 0
+        nr = 2
+        for coef in spec.get_coefficients():
+            if coef is not None:
+                line += "{:15.8E}".format(coef)
+            else:
+                line += " " * 15
+            i += 1
+            if i >= 5:
+                line = line.ljust(79)
+                line = line + str(nr)
+                lines.append(line)
+                line = ""
+                i = 0
+                nr += 1
+        if line != "":
+            lines.append(line)
+
+    file.write("\n".join(lines))
+    file.close()
+    return True
 
 
 def find_species(species:str, dictionary: dict[str, Species]) -> Species:

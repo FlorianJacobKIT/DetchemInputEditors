@@ -15,12 +15,12 @@ dir_name_1 = filedialog.askopenfilename(title="First Thermal Data File")
 if dir_name_1 == "":
     exit(0)
 
-read1 = ThermalDataReader.read_all_file(dir_name_1)
+read1 = ThermalDataReader.read_thermdata_file(dir_name_1)
 
 dir_name_2 = filedialog.askopenfilename(title="Second Thermal Data File")
 if dir_name_2 == "":
     exit(0)
-read2 = ThermalDataReader.read_all_file(dir_name_2)
+read2 = ThermalDataReader.read_thermdata_file(dir_name_2)
 
 keyset1 = set(read1.keys())
 keyset2 = set(read2.keys())
@@ -47,51 +47,4 @@ if combine:
         else:
             read1[key] = read2[key]
 
-    file = open(dir_name_1.split(".")[0] + "_combined.txt", "w")
-    lines = list()
-    for key,spec in read1.items():
-        line = list("".ljust(80))
-        line[0:8] = list(str(spec).ljust(8))
-        line[8:24] = spec.comment
-
-        for i in range(24, 44, 5):
-            line[i+4] = str(0)
-        i = 24
-        for atom in spec.get_atoms().keys():
-            name = str(atom)
-            nr = str(spec.get_atoms()[atom])
-            content = name.ljust(5-len(nr))
-            content += nr
-            line[i:i + 5] = content
-            i += 5
-        line[48:58] = "{:10.2F}".format(spec.get_temp_min()).rjust(10)
-        line[58:68] = "{:10.2F}".format(spec.get_temp_max()).rjust(10)
-        line[68:76] = "{:8.2F}".format(spec.get_temp_switch()).rjust(8)
-        line[44] = reconvert_state(spec.state)
-        line[79] = "1"
-        lines.append("".join(line))
-
-        line = ""
-        i = 0
-        nr = 2
-        for coef in spec.get_coefficients():
-            if coef is not None:
-                line += "{:15.8E}".format(coef)
-            else:
-                line += " "*15
-            i+=1
-            if i >= 5:
-                line = line.ljust(79)
-                line = line + str(nr)
-                lines.append(line)
-                line = ""
-                i = 0
-                nr += 1
-        if line != "":
-            lines.append(line)
-
-    file.write("\n".join(lines))
-    file.close()
-
-
-
+    ThermalDataReader.write_thermdata_file(dir_name_1.split(".")[0] + "_combined.txt", read1)
