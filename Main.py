@@ -9,4 +9,7 @@ mode = SelectionDialog.GeneralDialog("Select Input File Editor",
 if mode == "":
     exit(0)
 
-call(["python", mode + "Package/" + mode + ".py"])
+if mode == "MechanismEditor":
+    import MechanismEditorPackage.MechanismEditor
+if mode == "ThermalDataCompare":
+    import ThermalDataComparePackage.ThermalDataCompare
