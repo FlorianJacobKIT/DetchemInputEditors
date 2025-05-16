@@ -1,3 +1,4 @@
+import copy
 import os
 from tkinter import filedialog
 
@@ -52,6 +53,8 @@ A = AdjustClass()
 A.adjust_data = data
 
 global_vars.thermalDataMap = ThermalDataReader.read_thermdata_file(os.path.join(global_vars.parent, "thermdata.txt"), data)
+global_vars.originalDataMap = copy.deepcopy(global_vars.thermalDataMap)
+
 
 file = open(dir_name, 'r')
 lines = file.readlines()

@@ -4,7 +4,7 @@ import tkinter.messagebox
 import tkinter.simpledialog
 
 from MechanismEditorPackage import Interfaces
-from MechanismEditorPackage.CenterGui import CenterWindow
+from GeneralUtil.CenterGui import CenterWindow
 from MechanismEditorPackage.Interfaces import Checkable, SelfFixing
 from GeneralUtil.TextModifiers import bcolors
 

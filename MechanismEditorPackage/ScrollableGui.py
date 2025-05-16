@@ -9,7 +9,7 @@ from MechanismEditorPackage import Config, Text_Util
 from MechanismEditorPackage import EditorGui
 from MechanismEditorPackage import ReactionEditorGuiUpdate
 from MechanismEditorPackage import global_vars
-from MechanismEditorPackage.CenterGui import CenterRootWindow
+from GeneralUtil.CenterGui import CenterRootWindow
 from MechanismEditorPackage.Reaction_Class import Reaction
 from MechanismEditorPackage.SpeciesDisplay import SpeciesDisplayGUI
 from MechanismEditorPackage.Widgets import StatusBarWidget

@@ -3,7 +3,7 @@ from tkinter import messagebox, simpledialog
 from typing import Any
 
 from MechanismEditorPackage import Config
-from MechanismEditorPackage.CenterGui import CenterWindow
+from GeneralUtil.CenterGui import CenterWindow
 from MechanismEditorPackage.Reaction_Class import Reaction
 from GeneralUtil import ThermalDataReader
 

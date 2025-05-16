@@ -33,7 +33,7 @@ def read_thermdata_file(file_name: str, ad_data:AdjustDataHolder = None) -> dict
     while 1 == 1:
         line = lines[lineCounter]
         lineCounter += 1
-        if line.startswith("THERMO ALL"):
+        if line.startswith("THERMO"):
             file.readline()
             lineCounter += 1
             break
@@ -45,6 +45,9 @@ def read_thermdata_file(file_name: str, ad_data:AdjustDataHolder = None) -> dict
     while 1 == 1:
         if lineCounter >= len(lines):
             break
+        if lines[lineCounter].startswith("!"):
+            lineCounter +=1
+            continue
         header = lines[lineCounter]
         header = header.replace("\n", "")
         if header.startswith("END"):

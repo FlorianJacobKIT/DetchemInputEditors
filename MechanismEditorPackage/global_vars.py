@@ -6,6 +6,7 @@ species: dict[str,Species|None] = dict()
 
 
 thermalDataMap: dict[str, Species]
+originalDataMap: dict[str, Species]
 parent: str
 
 file_prefix: list[str]

@@ -5,7 +5,7 @@ import tkinter.simpledialog
 
 from MechanismEditorPackage import Interfaces
 from MechanismEditorPackage import Reaction_Class
-from MechanismEditorPackage.CenterGui import CenterWindow
+from GeneralUtil.CenterGui import CenterWindow
 from MechanismEditorPackage.Interfaces import Checkable, SelfFixing
 
 

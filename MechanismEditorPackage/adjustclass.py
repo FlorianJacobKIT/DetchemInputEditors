@@ -319,7 +319,7 @@ class AdjustClass(object):
                 else:
                     eps[s] = val
             for s, val in list(eps.items()):
-                s.therm.set_adjusted_cov(cov, val)
+                s.all_data.set_adjusted_cov(cov, val)
                 print("$" + cov + " of " + str(s) + " =", val)
 
             # new coverage dependencies in all reactions:
