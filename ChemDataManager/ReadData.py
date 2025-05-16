@@ -6,7 +6,10 @@ from ChemDataManager.SourceFormat import Source
 
 
 def readChemData() -> dict[str, tuple[list[ChemData],list[ChemData]]]:
-    chemDataFile = open("ChemData.csv","r")
+    try:
+        chemDataFile = open("ChemData.csv","r")
+    except FileNotFoundError:
+        chemDataFile = open("ChemDataManager/ChemData.csv","r")
     lines = chemDataFile.readlines()
     chemDataFile.close()
     storage: dict[str, tuple[list[ChemData],list[ChemData]]] = dict()
@@ -51,7 +54,11 @@ def readChemData() -> dict[str, tuple[list[ChemData],list[ChemData]]]:
     return od
 
 def readLibData() -> dict[int, Source]:
-    chemDataFile = open("Sources.csv","r")
+    try:
+        chemDataFile = open("Sources.csv","r")
+    except FileNotFoundError:
+        chemDataFile = open("ChemDataManager/Sources.csv","r")
+
     lines = chemDataFile.readlines()
     chemDataFile.close()
     storage: dict[int, Source] = dict()
