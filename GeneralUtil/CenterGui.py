@@ -24,6 +24,10 @@ class CenterGuiMixin(tkinter.Toplevel):
         self.geometry('+%d+%d' % (x, y))
         return self
 
+    def show(self):
+        self.wm_deiconify()
+        self.wait_window()
+
 class CenterWindow(CenterGuiMixin):
     def __init__(self, master):
         super().__init__(master=master)

@@ -3,7 +3,7 @@ import tkinter as tk
 from tkinter import messagebox
 
 from ChemDataManager import global_vars, ReadData
-from ChemDataManager.SpeciesDataDisplayer import SpeciesDisplay
+from ChemDataManager.GUIs.SpeciesDataDisplayer import SpeciesDisplay
 from GeneralUtil.CenterGui import CenterRootWindow
 
 

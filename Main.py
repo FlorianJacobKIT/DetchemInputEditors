@@ -1,6 +1,5 @@
-from subprocess import call
-
 from MechanismEditorPackage import SelectionDialog
+
 
 keys = ["MechanismEditor","ThermalDataCompare","ChemDataManager"]
 
@@ -10,8 +9,11 @@ if mode == "":
     exit(0)
 
 if mode == "MechanismEditor":
-    import MechanismEditorPackage.MechanismEditor
+    from MechanismEditorPackage import MechanismEditor
+    editor = MechanismEditor
 if mode == "ThermalDataCompare":
-    import ThermalDataComparePackage.ThermalDataCompare
+    from ThermalDataComparePackage import ThermalDataCompare
+    editor = ThermalDataCompare
 if mode == "ChemDataManager":
-    import  ChemDataManager.SelectionGui
+    from ChemDataManager.GUIs import SelectionGui
+    editor = SelectionGui
