@@ -1,5 +1,6 @@
 import math
 import tkinter.messagebox
+from tkinter import messagebox
 from typing import Callable
 
 from MechanismEditorPackage import global_vars
@@ -261,8 +262,8 @@ class Reaction(Checkable, SelfFixing, EditorAdjusted):
         try:
             return logArrheniusTerm(math.log(self.A_k), self.beta_k, -self.E_k / R)
         except ValueError as e:
-            print(e)
-            print("Reaction with Problem:" + str(self))
+            messagebox.showerror("Math Error","Reaction with Problem:\n" + str(self))
+            raise ValueError(e)
 
     def Kp2Kc(self, T):
         K = 1.0
