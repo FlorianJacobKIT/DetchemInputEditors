@@ -2,7 +2,7 @@ from collections.abc import Callable
 
 from ChemDataManager import global_vars
 from ChemDataManager.ChemDataFormat import ChemData
-from ChemDataManager.GUIs import DataEditor
+from ChemDataManager.GUIs import TransportEditor
 from GeneralUtil.CenterGui import CenterWindow
 import tkinter as tk
 
@@ -83,7 +83,7 @@ class SpeciesDisplay(CenterWindow):
         self.center()
 
     def load_chem_frame(self, chemFrame):
-        chemDataTitle = tk.Label(chemFrame, text="Chem Data", font=("Arial", 16), anchor=tk.W)
+        chemDataTitle = tk.Label(chemFrame, text="Transport Data", font=("Arial", 16), anchor=tk.W)
         chemDataTitle.grid(row=0, column=0, columnspan=3, sticky='nsew')
         column = 4
         label = tk.Label(chemFrame, text="geometry", anchor=tk.E, width=10)
@@ -105,8 +105,9 @@ class SpeciesDisplay(CenterWindow):
         divider = tk.Frame(chemFrame, bg="black", height=1)
         divider.grid(row=1, column=0, columnspan=column, sticky='nsew')
         line = 2
+
         def open_editor(chem_data):
-            DataEditor.MolDataDisplayer(self,chemData).show()
+            TransportEditor.MolDataDisplayer(self, chem_data).show()
             for child in chemFrame.winfo_children():
                 child.destroy()
             self.load_chem_frame(chemFrame)

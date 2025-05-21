@@ -34,7 +34,7 @@ if not os.path.isfile(inp_file_name):
     if not os.path.isfile(inp_file_name):
         newData = AdjustDataHolder()
         newData.surface_side_value["surface_name"] = Surface(surface_side_density=1.01e-09)
-        newData.T_ref_value = [TemperatureRange(700,300,20)]
+        newData.T_ref_value = [TemperatureRange(300,700,20)]
         newData.flag_weight_value = 1
         json_Version = newData.toJSON(True)
         inp_file_name = os.path.join(global_vars.parent, "adjust.json")
@@ -52,7 +52,7 @@ data.fromJSON(coder)
 A = AdjustClass()
 A.adjust_data = data
 
-global_vars.thermalDataMap = ThermalDataReader.read_thermdata_file(os.path.join(global_vars.parent, "thermdata.txt"), data)
+global_vars.thermalDataMap = ThermalDataReader.read_thermdata_file(os.path.join(global_vars.parent, "thermdata"), data)
 global_vars.originalDataMap = copy.deepcopy(global_vars.thermalDataMap)
 
 

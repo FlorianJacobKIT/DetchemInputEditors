@@ -258,7 +258,11 @@ class Reaction(Checkable, SelfFixing, EditorAdjusted):
             self._E_k = value
 
     def get_logkf(self):
-        return logArrheniusTerm(math.log(self.A_k), self.beta_k, -self.E_k / R)
+        try:
+            return logArrheniusTerm(math.log(self.A_k), self.beta_k, -self.E_k / R)
+        except ValueError as e:
+            print(e)
+            print("Reaction with Problem:" + str(self))
 
     def Kp2Kc(self, T):
         K = 1.0
