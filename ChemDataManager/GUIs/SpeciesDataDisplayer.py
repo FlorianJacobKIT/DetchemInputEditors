@@ -71,7 +71,7 @@ class SpeciesDisplay(CenterWindow):
     def load_chem_frame(self, chemFrame):
         chemDataTitle = tk.Label(chemFrame, text="Transport Data", font=("Arial", 16), anchor=tk.W)
         chemDataTitle.grid(row=0, column=0, columnspan=2, sticky='nsew')
-        column = 4
+        column = 3
         label = tk.Label(chemFrame, text="geometry", anchor=tk.E, width=10)
         column = self.add_label(column, label, 0)
         label = tk.Label(chemFrame, text="molar_mass", anchor=tk.E, width=10)
@@ -117,14 +117,11 @@ class SpeciesDisplay(CenterWindow):
                 author = source.author[:17] + "..."
             label = tk.Label(chemFrame, text=author, width=16, anchor=tk.W)
             column = self.add_label(column, label, line)
-
-
-
             column -= - 1
             label = tk.Label(chemFrame, text=chemData.geometry, anchor=tk.E)
 
             column = self.add_label(column, label, line, click_effect)
-            label = tk.Label(chemFrame, text=chemData.molar_mass, anchor=tk.E)
+            label = tk.Label(chemFrame, text="{:g}".format(chemData.molar_mass), anchor=tk.E)
             column = self.add_label(column, label, line, click_effect)
             label = tk.Label(chemFrame, text=chemData.lennard_jones_potential, anchor=tk.E)
             column = self.add_label(column, label, line, click_effect)
@@ -161,7 +158,7 @@ class SpeciesDisplay(CenterWindow):
     def load_therm_frame(self, thermFrame):
         chemDataTitle = tk.Label(thermFrame, text="Therm Data", font=("Arial", 16), anchor=tk.W)
         chemDataTitle.grid(row=0, column=0, columnspan=2, sticky='nsew')
-        column = 4
+        column = 3
         line = 0
         label = tk.Label(thermFrame, text="State", anchor=tk.W)
         column = self.add_label(column, label, line)

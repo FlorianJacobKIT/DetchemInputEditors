@@ -1,11 +1,18 @@
 import copy
 import traceback
+from email._header_value_parser import Atom
 from tkinter import messagebox
+from tkinter import simpledialog
+import os
+
+from periodictable import core
+from periodictable.core import Isotope
 
 import GeneralUtil.MaterialData
 import GeneralUtil.ThermalDataReader
 from ChemDataManager import global_vars
 from ChemDataManager.ChemDataFormat import ChemData
+from GeneralUtil import MaterialData
 
 
 def read_moldata(filename:str, source_id:int):
@@ -117,6 +124,34 @@ def read_thermdata(filename:str, source_id:int):
             global_vars.chemData[spec] = ([], [data])
 
     return 0
+
+def write_thermdata(folderName:str):
+    spec_dict: dict[str,MaterialData.Species] = dict()
+
+    print("Exporting Thermal Data")
+    for key, chemData in global_vars.selected_data.items():
+        chemData = chemData[1]
+        if chemData is None:
+            continue
+        print("\tExporting: " + key)
+        if len(key)>8:
+            while len(key)>8 or key=="":
+                key = simpledialog.askstring("Define Name", "Species name for >" + key + "< to long. Please choose one with only 8 characters.")
+        spec = MaterialData.Species(key, MaterialData.convert_state(chemData.state))
+        spec.comment = "Generated"
+        for atom in chemData.atoms:
+            spec.add_atom(core.default_table().isotope(atom.capitalize()), chemData.atoms[atom])
+        spec.set_temp_max(chemData.high_temperature)
+        spec.set_temp_min(chemData.low_temperature)
+        spec.set_temp_switch(chemData.jump_temperature)
+        for coefficient in chemData.coefficients:
+            spec.add_coefficient(coefficient)
+        spec_dict[key] = spec
+
+    print("Spec Dict")
+
+    filename = os.path.join(folderName, "thermdata")
+    GeneralUtil.ThermalDataReader.write_thermdata_file(filename, spec_dict)
 
 
 

@@ -42,7 +42,7 @@ class ListGui(CenterRootWindow):
 
         export_button = tk.Button(self,text="Import File", font=("Arial", 12), command=lambda :self.import_file())
         export_button.grid(row=3, column=0, sticky=tk.NW, padx=5, pady=5)
-        export_button = tk.Button(self,text="Export Simulation Files", font=("Arial", 12), command=lambda :messagebox.showinfo("WIP", "This feature is not implemented yet."))
+        export_button = tk.Button(self,text="Export Simulation Files", font=("Arial", 12), command=lambda :self.export_file())
         export_button.grid(row=3, column=1, sticky=tk.NW, padx=5, pady=5)
         upload_button = tk.Button(self,text="Save Locally", font=("Arial", 12), command=lambda :self.save_locally())
         upload_button.grid(row=3, column=2, sticky=tk.NW, padx=5, pady=5)
@@ -101,6 +101,13 @@ class ListGui(CenterRootWindow):
                 messagebox.showinfo("Molecular Data Imported", "Molecular Data >" + dir_name + "< successfully Imported")
         self.load_element_display()
 
+    def export_file(self):
+        folder = filedialog.askdirectory()
+        if folder == "":
+            return
+        ReadExternalFile.write_thermdata(folder)
+
+        messagebox.showinfo("Data Exported", "Data exported to >" + folder + "< successfully")
 
     def save_locally(self):
         ReadData.writeChemData(global_vars.chemData)

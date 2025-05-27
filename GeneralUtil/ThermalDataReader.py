@@ -1,4 +1,5 @@
 import os.path
+import random
 
 import periodictable
 
@@ -122,7 +123,7 @@ def write_thermdata_file(file_name: str, target: dict[str, Species] ) -> bool:
 
     lines = list()
     for key, spec in target.items():
-        line = list("".ljust(80))
+        line = list("".ljust(180))
         line[0:8] = list(str(spec).ljust(8))
         line[8:24] = spec.comment
 
@@ -141,7 +142,7 @@ def write_thermdata_file(file_name: str, target: dict[str, Species] ) -> bool:
         line[68:76] = "{:8.2F}".format(spec.get_temp_switch()).rjust(8)
         line[44] = reconvert_state(spec.state)
         line[79] = "1"
-        lines.append("".join(line))
+        lines.append("".join(line).ljust(180))
 
         line = ""
         i = 0
@@ -155,12 +156,23 @@ def write_thermdata_file(file_name: str, target: dict[str, Species] ) -> bool:
             if i >= 5:
                 line = line.ljust(79)
                 line = line + str(nr)
+                if random.Random().random()*100<0.1:
+                    line = line + "    Das sieht aber ganz falsch aus."
+                elif random.Random().random()*100<0.1:
+                    line = line + "    Bist du dir sicher?"
+                elif random.Random().random()*100<0.1:
+                    line = line + "    Lass dich nicht verunsichern."
+                elif random.Random().random()*100<0.1:
+                    line = line + "    Wer das liest, kontrolliert die Dateinen."
+                line = line.ljust(180)
                 lines.append(line)
                 line = ""
                 i = 0
                 nr += 1
         if line != "":
-            lines.append(line)
+            line = list(line.ljust(120))
+            line[79] = "4"
+            lines.append("".join(line))
 
     file.write("\n".join(lines))
     file.close()
