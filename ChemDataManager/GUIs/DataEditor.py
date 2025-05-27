@@ -13,6 +13,8 @@ from ChemDataManager.ChemDataFormat import ChemData
 from ChemDataManager.GUIs import SourceDataDisplayer
 from GeneralUtil import Nat_Constants, MaterialData
 from GeneralUtil.CenterGui import CenterWindow
+from GeneralUtil.Errors import OutOfBoundError
+from GeneralUtil.MaterialData import Species
 
 
 class MolDataDisplayer(CenterWindow):
@@ -23,6 +25,8 @@ class MolDataDisplayer(CenterWindow):
     viscosity: tuple[list[float],list[float]]
     heat_conductivity: tuple[list[float],list[float]]
     plot: Axes
+    chem_data: ChemData
+    limits = (300,5000)
 
     def __init__(self, master, chem_data: ChemData):
         super().__init__(master)
@@ -62,9 +66,11 @@ class MolDataDisplayer(CenterWindow):
         x:list[float] = []
         self_diff:list[float] = []
         viscosity:list[float] = []
+        heat_conductivity:list[float] = []
 
         self.self_diff = (x, self_diff)
         self.viscosity = (x, viscosity)
+        self.heat_conductivity = (x, heat_conductivity)
 
         self.calculate_values()
         plot1: Axes
@@ -74,14 +80,16 @@ class MolDataDisplayer(CenterWindow):
         self.create_plot(plot_frame)
 
         btn_frame = tk.Frame(self)
-        btn_frame.grid_rowconfigure(list(range(2)), weight=1)
-        btn_frame.grid_columnconfigure(list(range(2)), weight=1)
+        btn_frame.grid_rowconfigure(list(range(3)), weight=1)
+        btn_frame.grid_columnconfigure(list(range(3)), weight=1)
         btn_frame.grid(row=row, column=0, columnspan=2, sticky=tk.EW)
         row -=- 1
         vis_btn = tk.Button(btn_frame, text="Viscosity", command=lambda: self.plot_array(self.viscosity))
         vis_btn.grid(row=0, column=0, sticky=tk.EW, padx=5, pady=5)
         diff_btn = tk.Button(btn_frame, text="Diffusion", command=lambda: self.plot_array(self.self_diff))
         diff_btn.grid(row=0, column=1, sticky=tk.EW, padx=5, pady=5)
+        diff_btn = tk.Button(btn_frame, text="Heat Conductivity", command=lambda: self.plot_array(self.heat_conductivity))
+        diff_btn.grid(row=0, column=2, sticky=tk.EW, padx=5, pady=5)
 
 
 
@@ -99,8 +107,20 @@ class MolDataDisplayer(CenterWindow):
     def plot_array(self, array):
         self.calculate_values()
         self.clear_plot()
-        self.plot.plot(array[0], array[1])
-        set_xstep_size(self.plot,array[0])
+        all_zero = all([v == 0 for v in array[1]])
+        if all_zero:
+            self.plot.set_title("Missing Thermdata, select one to proceed")
+        else:
+            self.plot.set_title("")
+        x = np.array(array[1])
+        selected = x != -1
+
+        x = np.extract(selected, array[0])
+        y = np.extract(selected, array[1])
+
+        self.plot.plot(x, y)
+        set_xstep_size(self.plot,self.limits[0],self.limits[1])
+        self.plot.set_xlim(self.limits[0] - 50,self.limits[1] + 50)
         self.plot.figure.canvas.draw()
 
 
@@ -127,6 +147,7 @@ class MolDataDisplayer(CenterWindow):
 
     def create_plot(self, parent):
         # the figure that will contain the plot
+        plot_frame = tk.Frame(parent)
         fig = Figure(figsize=(5, 5),
                      dpi=100)
         # adding the subplot
@@ -136,13 +157,16 @@ class MolDataDisplayer(CenterWindow):
         plot1.grid(True)
         # creating the Tkinter canvas
         # containing the Matplotlib figure
-        canvas = FigureCanvasTkAgg(fig, master=parent)
+        canvas = FigureCanvasTkAgg(fig, master=plot_frame)
         canvas.draw()
 
         #plot1.set_xlim([300,5000])
 
         # placing the canvas on the Tkinter window
         canvas.get_tk_widget().pack()
+        import_btn = tk.Button(plot_frame,text="Compare Experimental Data", command=lambda:print("Importing..."))
+        import_btn.pack(expand=True, fill=tk.Y)
+        plot_frame.pack()
 
     def clear_plot(self):
         self.plot.clear()
@@ -154,9 +178,25 @@ class MolDataDisplayer(CenterWindow):
         x:list[float] = self.self_diff[0]
         self_diff:list[float] = self.self_diff[1]
         viscosity:list[float] = self.viscosity[1]
+        heat_conductivity: list[float] = self.heat_conductivity[1]
+
+        if self.chem_data.species not in global_vars.selected_data:
+            heat_conductivity.append(0)
+        data = global_vars.selected_data[self.chem_data.species][1]
+        spec = None
+        if data is not None:
+            spec = Species(data.species, state=MaterialData.convert_state(data.state))
+            spec.set_temp_max(data.high_temperature)
+            spec.set_temp_min(data.low_temperature)
+            spec.set_temp_switch(data.jump_temperature)
+            for coefficient in data.coefficients:
+                spec.add_coefficient(coefficient)
+
+
         x.clear()
         self_diff.clear()
         viscosity.clear()
+        heat_conductivity.clear()
 
         M = self.chem_data.molar_mass
         if M==-1:
@@ -169,7 +209,7 @@ class MolDataDisplayer(CenterWindow):
         omega_table = numpy.array(Omega_Table.omega_table)
         T_star_0 = Nat_Constants.k_b * 298 / epsilon
         f_Z_0 = 1 + math.pi ** 1.5 / 2 / math.sqrt(T_star_0) + (math.pi ** 2 / 4 + 2) / T_star_0 + (math.pi / T_star_0) ** 1.5
-        for T in range(300,5000,50):
+        for T in range(self.limits[0],self.limits[1],50):
             rho = p*M/(Nat_Constants.R*T)
             T_star =Nat_Constants.k_b * T/epsilon
 
@@ -209,10 +249,16 @@ class MolDataDisplayer(CenterWindow):
             f_tra = 2.5*(1-2/math.pi*cV_rot/cV_tra*A/B)
             f_rot = f_vib*(1+2/math.pi*A/B)
 
-            # TODO
-            # cV required Thermdata ahhhhhh
-            cV_vib = 1
-            heat_lambda=viscosity[-1] /M * (f_tra * cV_tra + f_rot * cV_rot + f_vib * cV_vib)
+            if spec is None:
+                heat_conductivity.append(0)
+                continue
+            try:
+                cV = spec.get_cp(T) * Nat_Constants.R
+            except OutOfBoundError:
+                heat_conductivity.append(-1)
+                continue
+            cV_vib = cV - cV_tra - cV_rot
+            heat_conductivity.append(viscosity[-1] /M * (f_tra * cV_tra + f_rot * cV_rot + f_vib * cV_vib))
 
 
 
@@ -409,10 +455,10 @@ class ThermDataDisplayer(CenterWindow):
             S.append(self.material.get_s(T))
 
 
-def set_xstep_size(plot, array):
-    step_pot = math.log10(abs(max(array) - min(array))) - 0.8
+def set_xstep_size(plot, lower, upper):
+    step_pot = math.log10(abs(upper - lower)) - 0.8
     step_size = round(10 ** step_pot / (10 ** math.floor(step_pot))) * 10 ** math.floor(step_pot)
-    plot.set_xticks(np.arange(min(array), max(array) + 1, step_size))
+    plot.set_xticks(np.arange(lower, upper + 1, step_size))
 
 
 def select_source(event,parent, source_id):

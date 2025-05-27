@@ -15,12 +15,21 @@ from GeneralUtil.CenterGui import CenterRootWindow
 class ListGui(CenterRootWindow):
 
     box: tk.Listbox
+    filter_var: tk.StringVar
 
     def __init__(self, parent):
         super().__init__(parent)
         self.grid_columnconfigure(4,weight=1)
         title = tk.Label(self, text="Chemical Data Manager", font=("Arial", 20))
         title.grid(row=0, column=0, columnspan = 6, sticky=tk.NSEW, padx=5, pady=5)
+
+        self.filter_var = tk.StringVar()
+        searchbar = tk.Entry(self, textvariable=self.filter_var, font=("Arial", 16))
+        self.filter_var.trace("w",lambda a,b,c: self.update_selection())
+        searchbar.grid(row=1, column=0, columnspan = 4, sticky=tk.NSEW, padx=5, pady=5)
+        info_box = tk.Label(self, text="Use \"*:\" to use fuzzy search", font=("Arial", 16))
+        info_box.grid(row=1, column=4, columnspan = 2, sticky=tk.NSEW, padx=5, pady=5)
+
         data = ReadData.readChemData()
         lib_data = ReadData.readLibData()
         global_vars.chemData = data
@@ -32,24 +41,19 @@ class ListGui(CenterRootWindow):
         self.load_element_display()
 
         export_button = tk.Button(self,text="Import File", font=("Arial", 12), command=lambda :self.import_file())
-        export_button.grid(row=2, column=0, sticky=tk.NW, padx=5, pady=5)
+        export_button.grid(row=3, column=0, sticky=tk.NW, padx=5, pady=5)
         export_button = tk.Button(self,text="Export Simulation Files", font=("Arial", 12), command=lambda :messagebox.showinfo("WIP", "This feature is not implemented yet."))
-        export_button.grid(row=2, column=1, sticky=tk.NW, padx=5, pady=5)
+        export_button.grid(row=3, column=1, sticky=tk.NW, padx=5, pady=5)
         upload_button = tk.Button(self,text="Save Locally", font=("Arial", 12), command=lambda :self.save_locally())
-        upload_button.grid(row=2, column=2, sticky=tk.NW, padx=5, pady=5)
+        upload_button.grid(row=3, column=2, sticky=tk.NW, padx=5, pady=5)
         upload_button = tk.Button(self,text="Upload Changes", font=("Arial", 12), command=lambda :messagebox.showinfo("WIP", "This feature is not implemented yet."))
-        upload_button.grid(row=2, column=3, sticky=tk.NW, padx=5, pady=5)
+        upload_button.grid(row=3, column=3, sticky=tk.NW, padx=5, pady=5)
 
         close_button = tk.Button(self,text="Close", font=("Arial", 12), width=10, command=lambda :self.destroy())
-        close_button.grid(row=2, column=5, sticky=tk.NSEW, padx=5, pady=5)
+        close_button.grid(row=3, column=5, sticky=tk.NSEW, padx=5, pady=5)
 
         self.center()
 
-    def info(self,event: tk.Event):
-        print(event.state)
-        print(event.type)
-        print(event.widget)
-        print(event.num)
 
     def move_selection(self, event: tk.Event, delta: int):
         cur = self.box.curselection()[0] + delta
@@ -70,7 +74,7 @@ class ListGui(CenterRootWindow):
         self.box.bind('<Return>', lambda event: self.open_data())
         self.box.bind('<Double-1>', lambda event: self.open_data())
         self.box.bind('<FocusIn>', self.focus_selection)
-        self.box.grid(row=1, column=0, columnspan=6, sticky=tk.NSEW, padx=10)
+        self.box.grid(row=2, column=0, columnspan=6, sticky=tk.NSEW, padx=10)
         self.update_selection()
 
 
@@ -118,7 +122,22 @@ class ListGui(CenterRootWindow):
         data = global_vars.chemData
         selection = global_vars.selected_data
         self.box.delete(0, tk.END)
+        filter_text = self.filter_var.get()
+        filter_text = filter_text.lower()
+        fuzzy = False
+        if filter_text == "":
+            fuzzy = True
+        if filter_text.startswith("*:"):
+            fuzzy = True
+            filter_text = filter_text.replace("*:","")
+
         for spec, info in data.items():
+            if fuzzy:
+                if filter_text not in spec.lower():
+                    continue
+            else:
+                if filter_text != spec.lower():
+                    continue
             color = "black"
             if spec not in selection:
                 spec_string = "□\t"
