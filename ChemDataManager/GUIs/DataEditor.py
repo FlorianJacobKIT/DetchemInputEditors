@@ -93,6 +93,7 @@ class MolDataDisplayer(CenterWindow):
         spacer.grid(row=1, column=2)
 
         plot_frame.grid(row=1, column=3, rowspan=row, sticky=tk.NSEW)
+        self.bind('<Escape>', lambda e: self.destroy())
         self.center()
 
     def plot_array(self, array):
@@ -329,7 +330,7 @@ class ThermDataDisplayer(CenterWindow):
 
         plot_frame.grid(row=1, column=3, rowspan=row, sticky=tk.NSEW)
 
-
+        self.bind('<Escape>', lambda e: self.destroy())
         self.center()
 
     def plot_array(self, array):

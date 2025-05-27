@@ -14,6 +14,7 @@ class SpeciesDisplay(CenterWindow):
 
     def __init__(self, parent, species_name: str):
         super().__init__(parent)
+
         self.species = global_vars.chemData[species_name]
         self.species_name = species_name
         self.chem_checks = list()
@@ -41,8 +42,15 @@ class SpeciesDisplay(CenterWindow):
         self.load_therm_frame(thermFrame)
         self.update_therm_checks()
 
+        self.bind('<Escape>', lambda e:self.destroy())
         self.center()
 
+    def focus_action(self, e: tk.Event):
+        btn: tk.Checkbutton = e.widget
+        if btn.cget("state") == "disabled":
+            return
+        btn.toggle()
+        btn.invoke()
 
 
     def update_chem_checks(self, c= None):
@@ -62,7 +70,7 @@ class SpeciesDisplay(CenterWindow):
 
     def load_chem_frame(self, chemFrame):
         chemDataTitle = tk.Label(chemFrame, text="Transport Data", font=("Arial", 16), anchor=tk.W)
-        chemDataTitle.grid(row=0, column=0, columnspan=3, sticky='nsew')
+        chemDataTitle.grid(row=0, column=0, columnspan=2, sticky='nsew')
         column = 4
         label = tk.Label(chemFrame, text="geometry", anchor=tk.E, width=10)
         column = self.add_label(column, label, 0)
@@ -94,21 +102,23 @@ class SpeciesDisplay(CenterWindow):
         for chemData in self.species[0]:
             column = 0
             source = global_vars.libData[chemData.source]
+            click_effect = lambda e, c=chemData: open_editor(c)
+
 
             checker = tk.Checkbutton(chemFrame)
+            checker.bind("<KeyRelease-Return>",click_effect)  # For Enter key release
             checker.config(command=lambda c=checker: self.update_chem_checks(c))
+            checker.config(text=str(source.creation_date.year), anchor=tk.W)
             self.chem_checks.append(checker)
             column = self.add_label(column, checker, line)
 
-            label = tk.Label(chemFrame, text=str(source.creation_date.year), anchor=tk.W)
-            column = self.add_label(column, label, line)
             author = source.author
             if len(source.author) > 20:
                 author = source.author[:17] + "..."
             label = tk.Label(chemFrame, text=author, width=16, anchor=tk.W)
             column = self.add_label(column, label, line)
 
-            click_effect = lambda e, c=chemData: open_editor(c)
+
 
             column -= - 1
             label = tk.Label(chemFrame, text=chemData.geometry, anchor=tk.E)
@@ -130,7 +140,7 @@ class SpeciesDisplay(CenterWindow):
             column = self.add_label(column, label, line, click_effect)
             line -= - 1
         divider = tk.Frame(chemFrame, bg="black", width=1)
-        divider.grid(row=0, column=3, rowspan=line, sticky='nsew')
+        divider.grid(row=0, column=2, rowspan=line, sticky='nsew')
 
     def update_therm_checks(self, c= None):
         pair = global_vars.selected_data[self.species_name]
@@ -150,7 +160,7 @@ class SpeciesDisplay(CenterWindow):
 
     def load_therm_frame(self, thermFrame):
         chemDataTitle = tk.Label(thermFrame, text="Therm Data", font=("Arial", 16), anchor=tk.W)
-        chemDataTitle.grid(row=0, column=0, columnspan=3, sticky='nsew')
+        chemDataTitle.grid(row=0, column=0, columnspan=2, sticky='nsew')
         column = 4
         line = 0
         label = tk.Label(thermFrame, text="State", anchor=tk.W)
@@ -173,21 +183,22 @@ class SpeciesDisplay(CenterWindow):
         for chemData in self.species[1]:
             column = 0
             source = global_vars.libData[chemData.source]
+            click_effect = lambda e, c=chemData: open_editor(c)
 
             checker = tk.Checkbutton(thermFrame)
+            checker.bind("<KeyRelease-Return>",click_effect)  # For Enter key release
             checker.config(command=lambda c=checker: self.update_therm_checks(c))
+            checker.config(text=str(source.creation_date.year), anchor=tk.W)
             self.therm_checks.append(checker)
             column = self.add_label(column, checker, line)
 
-            label = tk.Label(thermFrame, text=str(source.creation_date.year), anchor=tk.W)
-            column = self.add_label(column, label, line)
             author = source.author
             if len(source.author) > 20:
                 author = source.author[:17] + "..."
             label = tk.Label(thermFrame, text=author, width=16, anchor=tk.W)
             column = self.add_label(column, label, line)
 
-            click_effect = lambda e, c=chemData: open_editor(c)
+
 
             column -= - 1
             label = tk.Label(thermFrame, text=chemData.state, anchor=tk.W)
@@ -202,7 +213,7 @@ class SpeciesDisplay(CenterWindow):
             line -= - 1
 
         divider = tk.Frame(thermFrame, bg="black", width=1)
-        divider.grid(row=0, column=3, rowspan=line, sticky='nsew')
+        divider.grid(row=0, column=2, rowspan=line, sticky='nsew')
 
     def add_label(self, column, label, line, click_effect:Callable= None):
         if click_effect is not None:
@@ -211,3 +222,4 @@ class SpeciesDisplay(CenterWindow):
         label.bind("<Button-1>", click_effect)
         column -= - 1
         return column
+

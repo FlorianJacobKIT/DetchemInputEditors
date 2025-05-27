@@ -14,7 +14,7 @@ from GeneralUtil.CenterGui import CenterRootWindow
 
 class ListGui(CenterRootWindow):
 
-    check_btn: dict[str,tk.Checkbutton] = {}
+    box: tk.Listbox
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -43,24 +43,36 @@ class ListGui(CenterRootWindow):
         close_button = tk.Button(self,text="Close", font=("Arial", 12), width=10, command=lambda :self.destroy())
         close_button.grid(row=2, column=5, sticky=tk.NSEW, padx=5, pady=5)
 
-    def load_element_display(self):
-        dist = int(math.floor(math.sqrt(len(global_vars.chemData))))
-        dataFrame = tk.Frame(self, borderwidth=5, relief=tk.RAISED, padx=5, pady=5)
-        i: int = 0
-        self.check_btn = dict()
-        for spec, info in global_vars.chemData.items():
-            spec_frame = tk.Frame(dataFrame)
-            spec_frame.grid_columnconfigure(1, weight=1)
-            check = tk.Checkbutton(spec_frame, state=tk.DISABLED)
-            self.check_btn[spec] = check
-            check.grid(row=0, column=0)
-            label = tk.Button(spec_frame, text=spec, command=lambda s=spec: self.open_data(s))
-            label.grid(row=0, column=1, sticky=tk.NSEW)
-            spec_frame.grid(column=i // dist, row=i % dist, sticky=tk.NSEW, padx=1, pady=1)
-            i -= - 1
-        dataFrame.grid(row=1, column=0, columnspan=6, sticky=tk.NSEW, padx=10)
-        self.update_selection()
         self.center()
+
+    def info(self,event: tk.Event):
+        print(event.state)
+        print(event.type)
+        print(event.widget)
+        print(event.num)
+
+    def move_selection(self, event: tk.Event, delta: int):
+        cur = self.box.curselection()[0] + delta
+        cur = max(0, cur)
+        if 0 <= cur < self.box.size():
+            event.widget.selection_clear(0, tk.END)
+            event.widget.select_set(cur)
+
+    def focus_selection(self, event: tk.Event):
+        if not self.box.curselection():
+            event.widget.select_set(0)
+
+
+    def load_element_display(self):
+        self.box = tk.Listbox(self, selectmode=tk.SINGLE, font=("Arial", 16))
+        self.box.bind('<Up>', lambda e:self.move_selection(e,-1))
+        self.box.bind('<Down>',lambda e: self.move_selection(e,1))
+        self.box.bind('<Return>', lambda event: self.open_data())
+        self.box.bind('<Double-1>', lambda event: self.open_data())
+        self.box.bind('<FocusIn>', self.focus_selection)
+        self.box.grid(row=1, column=0, columnspan=6, sticky=tk.NSEW, padx=10)
+        self.update_selection()
+
 
     def import_file(self):
         answer = SelectionDialog.GeneralDialog("Choose type of import file:", ["thermdata", "moldata"]).center().show()
@@ -90,33 +102,41 @@ class ListGui(CenterRootWindow):
         ReadData.writeChemData(global_vars.chemData)
         ReadData.writeLibData(global_vars.libData)
 
-    def open_data(self, speciesName):
-        displayer = SpeciesDisplay(self, speciesName)
+    def open_data(self):
+        selected = self.box.curselection()[0]
+        selected_str: str = self.box.get(selected)
+        displayer = SpeciesDisplay(self, selected_str.split("\t")[1])
         displayer.show()
         if len(self.children) != 0:
             self.update_selection()
+        self.box.selection_clear(0, tk.END)
+        self.box.select_set(selected)
+        self.box.activate(selected)
+        self.box.see(selected)
 
     def update_selection(self):
         data = global_vars.chemData
         selection = global_vars.selected_data
+        self.box.delete(0, tk.END)
         for spec, info in data.items():
+            color = "black"
             if spec not in selection:
-                self.check_btn[spec].deselect()
-                continue
-            select = selection[spec]
-            if select == (None, None):
-                self.check_btn[spec].deselect()
-                continue
-            if select[0] is None:
-                self.check_btn[spec].select()
-                self.check_btn[spec].configure(disabledforeground="blue")
-                continue
-            if select[1] is None:
-                self.check_btn[spec].select()
-                self.check_btn[spec].configure(disabledforeground="red")
-                continue
-            self.check_btn[spec].select()
-            self.check_btn[spec].configure(disabledforeground="green")
+                spec_string = "□\t"
+            else:
+                select = selection[spec]
+                if select == (None, None):
+                    spec_string = "☐\t"
+                elif select[0] is None:
+                    spec_string = "🌡\t"
+                    color = "red"
+                elif select[1] is None:
+                    spec_string = "〰\t"
+                    color = "blue"
+                else:
+                    spec_string = "✓\t"
+                    color = "green"
+            self.box.insert(tk.END, spec_string + spec)
+            self.box.itemconfig(tk.END, foreground=color)
 
 
 
