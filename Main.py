@@ -1,10 +1,9 @@
-from MechanismEditorPackage import SelectionDialog
-
+from GeneralUtil import SelectionDialog
 
 keys = ["MechanismEditor","ThermalDataCompare","ChemDataManager"]
 
 mode = SelectionDialog.GeneralDialog("Select Input File Editor",
-                                     keys, None).center().show()
+                                     keys).center().show()
 if mode == "":
     exit(0)
 

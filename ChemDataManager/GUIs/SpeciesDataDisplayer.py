@@ -1,86 +1,64 @@
 from collections.abc import Callable
 
 from ChemDataManager import global_vars
-from ChemDataManager.ChemDataFormat import ChemData
-from ChemDataManager.GUIs import TransportEditor
+from ChemDataManager.GUIs import DataEditor
+from GeneralUtil import TextModifiers
 from GeneralUtil.CenterGui import CenterWindow
 import tkinter as tk
 
 
 class SpeciesDisplay(CenterWindow):
 
-    def __init__(self, parent, species_name):
+    chem_checks: list[tk.Checkbutton]
+    therm_checks: list[tk.Checkbutton]
+
+    def __init__(self, parent, species_name: str):
         super().__init__(parent)
         self.species = global_vars.chemData[species_name]
+        self.species_name = species_name
+        self.chem_checks = list()
+        self.therm_checks = list()
         row = 0
         column = 0
-        title = tk.Label(self, text=species_name, font=("Arial", 20))
+        #title = tk.Label(self, text=species_name, font=("Arial", 20))
+
+        title = TextModifiers.generate_spec_text(self,species_name,20)
+
         title.grid(row=row, column=0, sticky='nsew')
         row -=- 1
-
 
         chemFrame = tk.Frame(self)
         chemFrame.grid(row=row, column=0, sticky='nsew', padx=10, pady=10)
         row -= - 1
 
         self.load_chem_frame(chemFrame)
+        self.update_chem_checks()
 
         thermFrame = tk.Frame(self)
         thermFrame.grid(row=row, column=0, sticky='nsew', padx=10, pady=10)
         row -= - 1
 
-        chemDataTitle = tk.Label(thermFrame, text="Therm Data", font=("Arial", 16), anchor=tk.W)
-        chemDataTitle.grid(row=0, column=0, columnspan = 3, sticky='nsew')
-
-        column = 4
-        line = 0
-        label = tk.Label(thermFrame, text="State", anchor=tk.W)
-        column = self.add_label(column, label, line)
-        label = tk.Label(thermFrame, text="Composition", anchor=tk.W)
-        column = self.add_label(column, label, line)
-        label = tk.Label(thermFrame, text="Graph", anchor=tk.W)
-        column = self.add_label(column, label, line)
-
-        divider = tk.Frame(thermFrame, bg="black", height=1)
-        divider.grid(row=1, column=0, columnspan=column, sticky='nsew')
-
-        line = 2
-        for chemData in self.species[1]:
-            column = 0
-            source = global_vars.libData[chemData.source]
-
-            checker = tk.Checkbutton(thermFrame)
-            column = self.add_label(column, checker, line)
-
-            label = tk.Label(thermFrame, text=str(source.creation_date.year), anchor=tk.W)
-            column = self.add_label(column, label, line)
-            author = source.author
-            if len(source.author) > 20:
-                author = source.author[:17] + "..."
-            label = tk.Label(thermFrame, text=author, width=16, anchor=tk.W)
-            column = self.add_label(column, label, line)
-
-            column -= - 1
-            label = tk.Label(thermFrame, text=chemData.state, anchor=tk.W)
-            column = self.add_label(column, label, line)
-            comp = ""
-            for atom,count in chemData.atoms.items():
-                comp += atom + ":" + str(count) + ";"
-            comp = comp[:-1]
-            label = tk.Label(thermFrame, text=comp, anchor=tk.W)
-            column = self.add_label(column, label, line)
-
-            show_btn = tk.Button(thermFrame, text="Open Therm Interface")
-            show_btn.grid(row=line, column=column, sticky='nsew')
-
-
-            line -= - 1
-
-
-        divider = tk.Frame(thermFrame, bg = "black", width=1)
-        divider.grid(row=0, column=3, rowspan=line, sticky='nsew')
+        self.load_therm_frame(thermFrame)
+        self.update_therm_checks()
 
         self.center()
+
+
+
+    def update_chem_checks(self, c= None):
+        pair = global_vars.selected_data[self.species_name]
+        if c is not None:
+            idx = self.chem_checks.index(c)
+            if self.species[0][idx] == pair[0]:
+                pair = (None, pair[1])
+            else:
+                pair = (self.species[0][idx], pair[1])
+            global_vars.selected_data[self.species_name] = pair
+        for idx in range(len(self.chem_checks)):
+            if self.species[0][idx] == pair[0]:
+                self.chem_checks[idx].select()
+            else:
+                self.chem_checks[idx].deselect()
 
     def load_chem_frame(self, chemFrame):
         chemDataTitle = tk.Label(chemFrame, text="Transport Data", font=("Arial", 16), anchor=tk.W)
@@ -107,9 +85,10 @@ class SpeciesDisplay(CenterWindow):
         line = 2
 
         def open_editor(chem_data):
-            TransportEditor.MolDataDisplayer(self, chem_data).show()
+            DataEditor.MolDataDisplayer(self, chem_data).show()
             for child in chemFrame.winfo_children():
                 child.destroy()
+            self.chem_checks = list()
             self.load_chem_frame(chemFrame)
 
         for chemData in self.species[0]:
@@ -117,6 +96,8 @@ class SpeciesDisplay(CenterWindow):
             source = global_vars.libData[chemData.source]
 
             checker = tk.Checkbutton(chemFrame)
+            checker.config(command=lambda c=checker: self.update_chem_checks(c))
+            self.chem_checks.append(checker)
             column = self.add_label(column, checker, line)
 
             label = tk.Label(chemFrame, text=str(source.creation_date.year), anchor=tk.W)
@@ -151,7 +132,81 @@ class SpeciesDisplay(CenterWindow):
         divider = tk.Frame(chemFrame, bg="black", width=1)
         divider.grid(row=0, column=3, rowspan=line, sticky='nsew')
 
-    def add_label(self, column, label, line, click_effect:Callable=None):
+    def update_therm_checks(self, c= None):
+        pair = global_vars.selected_data[self.species_name]
+        if c is not None:
+            idx = self.therm_checks.index(c)
+            if self.species[1][idx] == pair[1]:
+                pair = (pair[0], None)
+            else:
+                pair = (pair[0], self.species[1][idx])
+            global_vars.selected_data[self.species_name] = pair
+        for idx in range(len(self.therm_checks)):
+            if self.species[1][idx] == pair[1]:
+                self.therm_checks[idx].select()
+            else:
+                self.therm_checks[idx].deselect()
+
+
+    def load_therm_frame(self, thermFrame):
+        chemDataTitle = tk.Label(thermFrame, text="Therm Data", font=("Arial", 16), anchor=tk.W)
+        chemDataTitle.grid(row=0, column=0, columnspan=3, sticky='nsew')
+        column = 4
+        line = 0
+        label = tk.Label(thermFrame, text="State", anchor=tk.W)
+        column = self.add_label(column, label, line)
+        label = tk.Label(thermFrame, text="Composition", anchor=tk.W)
+        column = self.add_label(column, label, line)
+        label = tk.Label(thermFrame, text="Graph", anchor=tk.W)
+        column = self.add_label(column, label, line)
+        divider = tk.Frame(thermFrame, bg="black", height=1)
+        divider.grid(row=1, column=0, columnspan=column, sticky='nsew')
+        line = 2
+
+        def open_editor(therm_data):
+            DataEditor.ThermDataDisplayer(self, therm_data).show()
+            for child in thermFrame.winfo_children():
+                child.destroy()
+            self.therm_checks = list()
+            self.load_therm_frame(thermFrame)
+
+        for chemData in self.species[1]:
+            column = 0
+            source = global_vars.libData[chemData.source]
+
+            checker = tk.Checkbutton(thermFrame)
+            checker.config(command=lambda c=checker: self.update_therm_checks(c))
+            self.therm_checks.append(checker)
+            column = self.add_label(column, checker, line)
+
+            label = tk.Label(thermFrame, text=str(source.creation_date.year), anchor=tk.W)
+            column = self.add_label(column, label, line)
+            author = source.author
+            if len(source.author) > 20:
+                author = source.author[:17] + "..."
+            label = tk.Label(thermFrame, text=author, width=16, anchor=tk.W)
+            column = self.add_label(column, label, line)
+
+            click_effect = lambda e, c=chemData: open_editor(c)
+
+            column -= - 1
+            label = tk.Label(thermFrame, text=chemData.state, anchor=tk.W)
+            column = self.add_label(column, label, line, click_effect)
+            comp = ""
+            for atom, count in chemData.atoms.items():
+                comp += atom + ":" + str(count) + ";"
+            comp = comp[:-1]
+            label = tk.Label(thermFrame, text=comp, anchor=tk.W)
+            column = self.add_label(column, label, line, click_effect)
+
+            line -= - 1
+
+        divider = tk.Frame(thermFrame, bg="black", width=1)
+        divider.grid(row=0, column=3, rowspan=line, sticky='nsew')
+
+    def add_label(self, column, label, line, click_effect:Callable= None):
+        if click_effect is not None:
+            label.config(cursor = "pencil")
         label.grid(row=line, column=column, sticky='nsew')
         label.bind("<Button-1>", click_effect)
         column -= - 1

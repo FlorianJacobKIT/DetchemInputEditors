@@ -8,8 +8,8 @@ class GeneralDialog(CenterRootWindow):
     result: str
     buttons: list
 
-    def __init__(self, prompt, answers, master):
-        super().__init__(master)
+    def __init__(self, prompt, answers):
+        super().__init__()
         self.result = ""
         self.buttons = list()
         label = tk.Label(self, text=prompt, font=('Arial', 20))
