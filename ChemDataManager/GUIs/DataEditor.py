@@ -1,12 +1,19 @@
 import math
 import tkinter as tk
+from tkinter import filedialog
 
+import matplotlib
 import numpy
 import numpy as np
+from PIL.XbmImagePlugin import xbm_head
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
+from matplotlib.backend_bases import MouseEvent, Event
+
+from matplotlib.backends._backend_tk import NavigationToolbar2Tk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
+from matplotlib.lines import Line2D
 
 from ChemDataManager import global_vars, Omega_Table
 from ChemDataManager.ChemDataFormat import ChemData
@@ -27,6 +34,11 @@ class MolDataDisplayer(CenterWindow):
     plot: Axes
     chem_data: ChemData
     limits = (300,5000)
+    toolbar: tk.Label = None
+    ref: list[Line2D] = None
+
+    active_plot: tuple[list[float],list[float]] = None
+
 
     def __init__(self, master, chem_data: ChemData):
         super().__init__(master)
@@ -105,8 +117,11 @@ class MolDataDisplayer(CenterWindow):
         self.center()
 
     def plot_array(self, array):
+        self.active_plot = array
         self.calculate_values()
         self.clear_plot()
+        self.ref = self.plot.plot([0, 0], [0, 0])
+
         all_zero = all([v == 0 for v in array[1]])
         if all_zero:
             self.plot.set_title("Missing Thermdata, select one to proceed")
@@ -145,28 +160,70 @@ class MolDataDisplayer(CenterWindow):
 
         var.trace_add("write", lambda a,b,c,v=var,t=text, e=edit: set_value(var,t,e))
 
+    def show_current_value(self, event:MouseEvent) -> None:
+        x = event.xdata
+        if x is None:
+            return
+        x_lim = self.plot.get_xlim()
+        y_lim = self.plot.get_ylim()
+        self.ref[0].set_data([x,x], [y_lim[0], y_lim[1]])
+        self.plot.set_xlim(x_lim)
+        self.plot.set_ylim(y_lim)
+        self.plot.figure.canvas.draw()
+
+        if self.active_plot is None:
+            return
+        x_data = np.array(self.active_plot[0])
+        idx = np.argmax(x_data > x)
+        y_data = np.array(self.active_plot[1])
+        y = y_data[idx]
+        self.toolbar.configure(text="x= {:g} y={:g}".format(x,y))
+
     def create_plot(self, parent):
         # the figure that will contain the plot
-        plot_frame = tk.Frame(parent)
         fig = Figure(figsize=(5, 5),
                      dpi=100)
         # adding the subplot
         self.plot = plot1 = fig.subplots()
+        self.ref = self.plot.plot([0, 0], [0, 0])
         # plotting the graph
         plot1.ticklabel_format(axis='y', scilimits=[-3, 3])
         plot1.grid(True)
         # creating the Tkinter canvas
         # containing the Matplotlib figure
-        canvas = FigureCanvasTkAgg(fig, master=plot_frame)
+        canvas = FigureCanvasTkAgg(fig, master=parent)
         canvas.draw()
-
-        #plot1.set_xlim([300,5000])
+        canvas.mpl_connect(
+            'motion_notify_event', self.show_current_value)
 
         # placing the canvas on the Tkinter window
         canvas.get_tk_widget().pack()
-        import_btn = tk.Button(plot_frame,text="Compare Experimental Data", command=lambda:print("Importing..."))
+
+        self.toolbar = tk.Label(parent, text="x: y: ", anchor=tk.CENTER)
+        self.toolbar.pack(side=tk.TOP, fill=tk.BOTH)
+
+        # Add import btn
+        import_btn = tk.Button(parent,text="Compare Experimental Data", command=self.import_data)
         import_btn.pack(expand=True, fill=tk.Y)
-        plot_frame.pack()
+
+    def import_data(self):
+        file_name = filedialog.askopenfilename(parent=self)
+        if file_name=="":
+            return
+        file = open(file_name)
+        data = file.readlines()
+        file.close()
+        x = list()
+        y= list()
+        for line in data:
+            line = line.strip("\n")
+            split_line = line.split(";")
+            x.append(float(split_line[0]))
+            y.append(float(split_line[1]))
+        self.plot.set_xlim(min(x)*0.9, max(x)*1.1)
+        self.plot.set_ylim(min(y)*0.9, max(y)*1.1)
+        self.plot.scatter(x, y, marker='x', c='r')
+
 
     def clear_plot(self):
         self.plot.clear()
@@ -268,12 +325,16 @@ class ThermDataDisplayer(CenterWindow):
 
     variables: list = []
 
-    material: MaterialData.Species
+    material: MaterialData.Species = None
 
-    cp: tuple[list[float],list[float]]
-    H: tuple[list[float],list[float]]
-    S: tuple[list[float],list[float]]
-    plot: Axes
+    cp: tuple[list[float],list[float]] = None
+    H: tuple[list[float],list[float]] = None
+    S: tuple[list[float],list[float]] = None
+    plot: Axes = None
+    toolbar: tk.Label = None
+    ref: list[Line2D] = None
+
+    active_plot: tuple[list[float],list[float]] = None
 
     #atoms: dict[str, int]
     #coefficients: list[float]
@@ -380,6 +441,7 @@ class ThermDataDisplayer(CenterWindow):
         self.center()
 
     def plot_array(self, array):
+        self.active_plot = array
         self.material = MaterialData.Species(self.chem_data.species,MaterialData.convert_state(self.chem_data.state))
         for coef in self.chem_data.coefficients:
             self.material.add_coefficient(coef)
@@ -388,8 +450,9 @@ class ThermDataDisplayer(CenterWindow):
         self.material.set_temp_switch(self.chem_data.jump_temperature)
         self.calculate_values()
         self.clear_plot()
+        self.ref = self.plot.plot([0, 0], [0, 0])
         self.plot.plot(array[0], array[1])
-        set_xstep_size(self.plot,array[0])
+        set_xstep_size(self.plot,min(array[0]),max(array[0]))
         self.plot.figure.canvas.draw()
 
 
@@ -416,12 +479,33 @@ class ThermDataDisplayer(CenterWindow):
 
         var.trace_add("write", lambda a,b,c,v=var,t=text, e=edit: set_value(var,t,e))
 
+    def show_current_value(self, event:MouseEvent) -> None:
+        x = event.xdata
+        if x is None:
+            return
+        x_lim = self.plot.get_xlim()
+        y_lim = self.plot.get_ylim()
+        self.ref[0].set_data([x,x], [y_lim[0], y_lim[1]])
+        self.plot.set_xlim(x_lim)
+        self.plot.set_ylim(y_lim)
+        self.plot.figure.canvas.draw()
+
+        if self.active_plot is None:
+            return
+        x_data = np.array(self.active_plot[0])
+        idx = np.argmax(x_data > x)
+        y_data = np.array(self.active_plot[1])
+        y = y_data[idx]
+        self.toolbar.configure(text="x= {:g} y={:g}".format(x,y))
+
+
     def create_plot(self, parent):
         # the figure that will contain the plot
         fig = Figure(figsize=(5, 5),
                      dpi=100)
         # adding the subplot
         self.plot = plot1 = fig.subplots()
+        self.ref = self.plot.plot([0, 0], [0, 0])
         # plotting the graph
         plot1.ticklabel_format(axis='y', scilimits=[-3, 3])
         plot1.grid(True)
@@ -429,9 +513,36 @@ class ThermDataDisplayer(CenterWindow):
         # containing the Matplotlib figure
         canvas = FigureCanvasTkAgg(fig, master=parent)
         canvas.draw()
+        canvas.mpl_connect(
+            'motion_notify_event', self.show_current_value)
 
         # placing the canvas on the Tkinter window
         canvas.get_tk_widget().pack()
+
+        self.toolbar = tk.Label(parent, text="x: y: ", anchor=tk.CENTER)
+        self.toolbar.pack(side=tk.TOP, fill=tk.BOTH)
+
+        # Add import btn
+        import_btn = tk.Button(parent,text="Compare Experimental Data", command=self.import_data)
+        import_btn.pack(expand=True, fill=tk.Y)
+
+    def import_data(self):
+        file_name = filedialog.askopenfilename(parent=self)
+        if file_name=="":
+            return
+        file = open(file_name)
+        data = file.readlines()
+        file.close()
+        x = list()
+        y= list()
+        for line in data:
+            line = line.strip("\n")
+            split_line = line.split(";")
+            x.append(float(split_line[0]))
+            y.append(float(split_line[1]))
+        self.plot.set_xlim(min(x)*0.9, max(x)*1.1)
+        self.plot.set_ylim(min(y)*0.9, max(y)*1.1)
+        self.plot.scatter(x, y, marker='x', c='r')
 
     def clear_plot(self):
         self.plot.clear()
