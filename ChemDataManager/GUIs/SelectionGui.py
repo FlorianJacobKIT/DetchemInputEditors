@@ -106,6 +106,7 @@ class ListGui(CenterRootWindow):
         if folder == "":
             return
         ReadExternalFile.write_thermdata(folder)
+        ReadExternalFile.write_moldata(folder)
 
         messagebox.showinfo("Data Exported", "Data exported to >" + folder + "< successfully")
 

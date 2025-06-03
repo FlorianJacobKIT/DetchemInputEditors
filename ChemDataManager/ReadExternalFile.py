@@ -100,6 +100,35 @@ def read_moldata(filename:str, source_id:int):
             return -1
         return 0
 
+def write_moldata(folderName:str):
+    filename = os.path.join(folderName, "moldata")
+    file = open(filename, "w")
+
+    print("Exporting Transport Data")
+    for key, chemData in global_vars.selected_data.items():
+        line = ""
+        chemData = chemData[0]
+        if chemData is None:
+            continue
+        print("\tExporting: " + key)
+        if len(key)>8:
+            spec_name = key
+            if key in global_vars.name_dict:
+                key = global_vars.name_dict[spec_name]
+            while len(key)>8 or key=="":
+                key = simpledialog.askstring("Define Name", "Species name for >" + key + "< to long. Please choose one with only 8 characters.")
+            global_vars.name_dict[spec_name] = key
+        line += chemData.species.ljust(19)
+        line += str(chemData.geometry)
+        line += "{:10.2E}".format(chemData.lennard_jones_potential)
+        line += "{:10.2E}".format(chemData.lennard_jones_collision)
+        line += "{:10.2E}".format(chemData.dipole_moment)
+        line += "{:10.2E}".format(chemData.polarizability)
+        line += "{:10.2E}".format(chemData.rotational_relaxation_collision_number)
+        line += chemData.comment_chem
+        line += "\n"
+        file.write(line)
+
 
 def read_thermdata(filename:str, source_id:int):
     content = GeneralUtil.ThermalDataReader.read_thermdata_file(filename)
@@ -135,8 +164,12 @@ def write_thermdata(folderName:str):
             continue
         print("\tExporting: " + key)
         if len(key)>8:
+            spec_name = key
+            if key in global_vars.name_dict:
+                key = global_vars.name_dict[spec_name]
             while len(key)>8 or key=="":
                 key = simpledialog.askstring("Define Name", "Species name for >" + key + "< to long. Please choose one with only 8 characters.")
+            global_vars.name_dict[spec_name] = key
         spec = MaterialData.Species(key, MaterialData.convert_state(chemData.state))
         spec.comment = "Generated"
         for atom in chemData.atoms:
@@ -147,8 +180,6 @@ def write_thermdata(folderName:str):
         for coefficient in chemData.coefficients:
             spec.add_coefficient(coefficient)
         spec_dict[key] = spec
-
-    print("Spec Dict")
 
     filename = os.path.join(folderName, "thermdata")
     GeneralUtil.ThermalDataReader.write_thermdata_file(filename, spec_dict)

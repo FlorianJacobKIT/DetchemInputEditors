@@ -56,7 +56,7 @@ class MolDataDisplayer(CenterWindow):
             author = source.author[:17] + "..."
         edit = tk.Label(self, text=str(source.creation_date.year) + " " + author, cursor = "pencil")
 
-        edit.bind("<Button-1>", lambda event: select_source(event, self, self.chem_data.source))
+        edit.bind("<Button-1>", lambda event: select_source(self, self.chem_data.source))
         edit.grid(row=row, column=1, sticky=tk.EW)
         row -=- 1
         self.add_property(row,"geometry", var = tk.IntVar())
@@ -344,7 +344,7 @@ class ThermDataDisplayer(CenterWindow):
         if len(source.author) > 20:
             author = source.author[:17] + "..."
         edit = tk.Label(self, text=str(source.creation_date.year) + " " + author, cursor = "pencil")
-        edit.bind("<Button-1>", lambda event: select_source(event, self, self.chem_data.source))
+        edit.bind("<Button-1>", lambda event: select_source(self, self.chem_data.source))
         edit.grid(row=row, column=1, sticky=tk.EW)
         row -=- 1
         self.add_property(row,"state", var = tk.StringVar())
@@ -560,6 +560,6 @@ def import_data(parent, plot):
     set_xstep_size(plot,min(x)- max_delta_x, max(x)+max_delta_x)
     plot.figure.canvas.draw()
 
-def select_source(event,parent, source_id):
+def select_source(parent, source_id):
     displayer = SourceDataDisplayer.SourceDisplay(parent, source_id)
     displayer.show()
