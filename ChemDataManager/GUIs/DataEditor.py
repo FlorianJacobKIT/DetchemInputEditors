@@ -203,26 +203,9 @@ class MolDataDisplayer(CenterWindow):
         self.toolbar.pack(side=tk.TOP, fill=tk.BOTH)
 
         # Add import btn
-        import_btn = tk.Button(parent,text="Compare Experimental Data", command=self.import_data)
+        import_btn = tk.Button(parent,text="Compare Experimental Data", command=lambda: import_data(self,self.plot))
         import_btn.pack(expand=True, fill=tk.Y)
 
-    def import_data(self):
-        file_name = filedialog.askopenfilename(parent=self)
-        if file_name=="":
-            return
-        file = open(file_name)
-        data = file.readlines()
-        file.close()
-        x = list()
-        y= list()
-        for line in data:
-            line = line.strip("\n")
-            split_line = line.split(";")
-            x.append(float(split_line[0]))
-            y.append(float(split_line[1]))
-        self.plot.set_xlim(min(x)*0.9, max(x)*1.1)
-        self.plot.set_ylim(min(y)*0.9, max(y)*1.1)
-        self.plot.scatter(x, y, marker='x', c='r')
 
 
     def clear_plot(self):
@@ -523,26 +506,10 @@ class ThermDataDisplayer(CenterWindow):
         self.toolbar.pack(side=tk.TOP, fill=tk.BOTH)
 
         # Add import btn
-        import_btn = tk.Button(parent,text="Compare Experimental Data", command=self.import_data)
+        import_btn = tk.Button(parent,text="Compare Experimental Data",  command=lambda: import_data(self,self.plot))
         import_btn.pack(expand=True, fill=tk.Y)
 
-    def import_data(self):
-        file_name = filedialog.askopenfilename(parent=self)
-        if file_name=="":
-            return
-        file = open(file_name)
-        data = file.readlines()
-        file.close()
-        x = list()
-        y= list()
-        for line in data:
-            line = line.strip("\n")
-            split_line = line.split(";")
-            x.append(float(split_line[0]))
-            y.append(float(split_line[1]))
-        self.plot.set_xlim(min(x)*0.9, max(x)*1.1)
-        self.plot.set_ylim(min(y)*0.9, max(y)*1.1)
-        self.plot.scatter(x, y, marker='x', c='r')
+
 
     def clear_plot(self):
         self.plot.clear()
@@ -571,6 +538,27 @@ def set_xstep_size(plot, lower, upper):
     step_size = round(10 ** step_pot / (10 ** math.floor(step_pot))) * 10 ** math.floor(step_pot)
     plot.set_xticks(np.arange(lower, upper + 1, step_size))
 
+def import_data(parent, plot):
+    file_name = filedialog.askopenfilename(parent=parent)
+    if file_name=="":
+        return
+    file = open(file_name)
+    data = file.readlines()
+    file.close()
+    x = list()
+    y= list()
+    for line in data:
+        line = line.strip("\n")
+        split_line = line.split(";")
+        x.append(float(split_line[0]))
+        y.append(float(split_line[1]))
+    max_delta_x = max(min(x)*0.2,max(x)*0.1)
+    max_delta_y = max(min(y)*0.2, max(y)*0.1)
+    plot.set_xlim(min(x)- max_delta_x, max(x)+max_delta_x)
+    plot.set_ylim(min(y)-max_delta_y, max(y) + max_delta_y)
+    plot.scatter(x, y, marker='x', c='r')
+    set_xstep_size(plot,min(x)- max_delta_x, max(x)+max_delta_x)
+    plot.figure.canvas.draw()
 
 def select_source(event,parent, source_id):
     displayer = SourceDataDisplayer.SourceDisplay(parent, source_id)
